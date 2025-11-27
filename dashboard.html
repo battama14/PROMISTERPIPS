@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Trading - Misterpips VIP</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    
+    <!-- Firebase Scripts -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+        import { getDatabase, ref, set, get, onValue, push } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSDK0NfVSs_VQb3TnrixiJbOpTsmoUMvU",
+            authDomain: "misterpips-b71fb.firebaseapp.com",
+            databaseURL: "https://misterpips-b71fb-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "misterpips-b71fb",
+            storageBucket: "misterpips-b71fb.firebasestorage.app",
+            messagingSenderId: "574231126409",
+            appId: "1:574231126409:web:b7ed93ac4ea62e247dc158"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        
+        window.firebaseDB = db;
+        window.firebaseAuth = auth;
+        window.dbRef = ref;
+        window.dbGet = get;
+        window.dbSet = set;
+        window.onValue = onValue;
+        window.push = push;
+        window.signOut = signOut;
+        
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+            } else {
+                sessionStorage.setItem('firebaseUID', user.uid);
+                sessionStorage.setItem('userEmail', user.email);
+                
+                // Charger le pseudo ou afficher l'email
+                const savedPseudo = localStorage.getItem(`pseudo_${user.uid}`);
+                const displayElement = document.getElementById('userDisplay');
+                if (displayElement) {
+                    displayElement.textContent = savedPseudo || user.email;
+                }
+            }
+        });
+        
+        console.log('✅ Firebase Dashboard initialisé');
+    </script>
+</head>
+<body class="dashboard-body">
+    <!-- Header Dashboard -->
+    <header class="dashboard-header">
+        <div class="header-container">
+            <div class="header-left">
+                <button id="backBtn" class="back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="brand-section">
+                    <div class="brand-logo">
+                        <img src="assets/images/Misterpips.jpg" alt="Misterpips Logo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                    </div>
+                    <div class="brand-info">
+                        <h1>Dashboard Trading</h1>
+                        <span class="brand-subtitle">Interface Professionnelle</span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="user-info" onclick="dashboard.showPseudoModal()" style="cursor: pointer;">
+                    <div class="user-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="user-details">
+                        <span id="userDisplay" class="user-email"></span>
+                        <span class="user-status">VIP Member - Cliquez pour changer</span>
+                    </div>
+                </div>
+                <div class="sync-status" id="syncStatus">
+                    <i class="fas fa-cloud"></i>
+                    <span>Synchronisé</span>
+                </div>
+                <button id="logoutBtn" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Dashboard -->
+    <main class="dashboard-main">
+        <!-- Sidebar Navigation -->
+        <aside class="dashboard-sidebar">
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <h3>Trading</h3>
+                    <a href="#overview" class="nav-item active">
+                        <i class="fas fa-chart-area"></i>
+                        <span>Vue d'ensemble</span>
+                    </a>
+                    <a href="#trades" class="nav-item">
+                        <i class="fas fa-exchange-alt"></i>
+                        <span>Mes Trades</span>
+                    </a>
+                    <a href="#analytics" class="nav-item">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Analytics</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <h3>Outils</h3>
+                    <a href="planning-forex.html" class="nav-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Planning Forex</span>
+                    </a>
+                    <a href="#ranking" class="nav-item" onclick="dashboard.showRanking()">
+                        <i class="fas fa-trophy"></i>
+                        <span>Classement VIP</span>
+                    </a>
+                    <a href="#settings" class="nav-item" onclick="dashboard.showSettings()">
+                        <i class="fas fa-cog"></i>
+                        <span>Paramètres</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Content Area -->
+        <div class="dashboard-content">
+            <!-- Stats Cards -->
+            <section class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-card primary">
+                        <div class="stat-icon">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-label">Capital Total</span>
+                            <span id="capital" class="stat-value">$1,000</span>
+                            <span class="stat-change positive">+2.5%</span>
+                        </div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-icon">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-label">Taux de Réussite</span>
+                            <span id="winRate" class="stat-value">0%</span>
+                            <span class="stat-change positive">+5.2%</span>
+                        </div>
+                    </div>
+                    <div class="stat-card info">
+                        <div class="stat-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-label">P&L Total</span>
+                            <span id="totalPnL" class="stat-value">$0</span>
+                            <span class="stat-change neutral">0%</span>
+                        </div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-icon">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-label">Trades Actifs</span>
+                            <span id="openTrades" class="stat-value">0</span>
+                            <span class="stat-change neutral">0</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Quick Actions -->
+            <section class="actions-section">
+                <div class="actions-header">
+                    <h2>Actions Rapides</h2>
+                </div>
+                <div class="actions-grid">
+                    <button id="newTradeBtn" class="action-btn primary">
+                        <i class="fas fa-plus"></i>
+                        <span>Nouveau Trade</span>
+                    </button>
+                    <button id="historyTradeBtn" class="action-btn secondary">
+                        <i class="fas fa-history"></i>
+                        <span>Trade Passé</span>
+                    </button>
+                    <button id="closeTradeBtn" class="action-btn warning">
+                        <i class="fas fa-times-circle"></i>
+                        <span>Clôturer Trade</span>
+                    </button>
+                    <button id="exportBtn" class="action-btn info">
+                        <i class="fas fa-download"></i>
+                        <span>Export Excel</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Charts Section -->
+            <section class="charts-section">
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Performance Cumulative</h3>
+                            <div class="chart-controls">
+                                <button class="chart-btn active">1M</button>
+                                <button class="chart-btn">3M</button>
+                                <button class="chart-btn">1A</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3>Répartition Win/Loss</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="winLossChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Trading Plan -->
+            <section class="plan-section">
+                <div class="plan-header">
+                    <h2>Plan de Trading & Objectifs</h2>
+                    <button id="settingsBtn" class="settings-btn">
+                        <i class="fas fa-cog"></i>
+                        Paramètres
+                    </button>
+                </div>
+                <div class="plan-grid">
+                    <div class="plan-card">
+                        <div class="plan-icon daily">
+                            <i class="fas fa-sun"></i>
+                        </div>
+                        <div class="plan-info">
+                            <h4>Objectif Journalier</h4>
+                            <div class="plan-target">
+                                <span id="dailyTargetPercent">1%</span> - $<span id="dailyTarget">10</span>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="dailyProgressBar"></div>
+                                </div>
+                                <span id="dailyProgress" class="progress-text">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="plan-card">
+                        <div class="plan-icon weekly">
+                            <i class="fas fa-calendar-week"></i>
+                        </div>
+                        <div class="plan-info">
+                            <h4>Objectif Hebdomadaire</h4>
+                            <div class="plan-target">
+                                <span id="weeklyTargetPercent">5%</span> - $<span id="weeklyTarget">50</span>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="weeklyProgressBar"></div>
+                                </div>
+                                <span id="weeklyProgress" class="progress-text">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="plan-card">
+                        <div class="plan-icon monthly">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <div class="plan-info">
+                            <h4>Objectif Mensuel</h4>
+                            <div class="plan-target">
+                                <span id="monthlyTargetPercent">15%</span> - $<span id="monthlyTarget">150</span>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="monthlyProgressBar"></div>
+                                </div>
+                                <span id="monthProgress" class="progress-text">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recent Trades -->
+            <section class="trades-section">
+                <div class="trades-header">
+                    <h2>Trades Récents</h2>
+                    <button class="view-all-btn">Voir tout</button>
+                </div>
+                <div class="trades-container">
+                    <div class="trades-table">
+                        <div class="table-header">
+                            <div class="th">Date</div>
+                            <div class="th">Paire</div>
+                            <div class="th">Type</div>
+                            <div class="th">Lot</div>
+                            <div class="th">P&L</div>
+                            <div class="th">Status</div>
+                            <div class="th">Actions</div>
+                        </div>
+                        <div id="tradesTableBody" class="table-body">
+                            <!-- Trades will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIP Ranking Section -->
+            <section id="rankingSection" class="ranking-section" style="display: none;">
+                <div class="ranking-header">
+                    <h2>🏆 Classement VIP</h2>
+                    <select id="rankingPeriod">
+                        <option value="daily">Aujourd'hui</option>
+                        <option value="weekly">Cette semaine</option>
+                        <option value="monthly">Ce mois</option>
+                        <option value="all">Tout temps</option>
+                    </select>
+                </div>
+                <div id="rankingList" class="ranking-list">
+                    <!-- Ranking will be loaded here -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Trade Modal -->
+    <div id="tradeModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="modalTitle">Nouveau Trade</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-content">
+                <div id="modalContent">
+                    <!-- Modal content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Widget -->
+    <div class="chat-widget">
+        <button class="chat-toggle">
+            <i class="fas fa-comments"></i>
+        </button>
+        <div class="chat-container" style="display: none;">
+            <div class="chat-header">
+                <h4>Chat VIP</h4>
+                <button class="chat-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="chat-messages">
+                <div class="welcome-message">
+                    <div class="message bot">
+                        <div class="message-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            <span class="message-author">Misterpips Bot</span>
+                            <p>Bienvenue dans le chat VIP ! 🚀</p>
+                            <span class="message-time">Maintenant</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-input">
+                <input type="text" id="chatInput" placeholder="Tapez votre message...">
+                <button id="sendBtn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="components/ranking.js"></script>
+    <script src="assets/js/ranking-init.js"></script>
+    <script src="assets/js/dashboard.js"></script>
+</body>
+</html>

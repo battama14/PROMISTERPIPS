@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Misterpips - Trading Professionnel</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00d4ff">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase Scripts -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword, setPersistence, browserSessionPersistence } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+        import { getDatabase, ref, set, get } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSDK0NfVSs_VQb3TnrixiJbOpTsmoUMvU",
+            authDomain: "misterpips-b71fb.firebaseapp.com",
+            databaseURL: "https://misterpips-b71fb-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "misterpips-b71fb",
+            storageBucket: "misterpips-b71fb.firebasestorage.app",
+            messagingSenderId: "574231126409",
+            appId: "1:574231126409:web:b7ed93ac4ea62e247dc158"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const database = getDatabase(app);
+        
+        window.firebaseAuth = { auth, signInWithEmailAndPassword };
+        window.firebaseDB = database;
+        window.dbRef = ref;
+        window.dbGet = get;
+        window.dbSet = set;
+        
+        await setPersistence(auth, browserSessionPersistence);
+        console.log('✅ Firebase initialisé');
+    </script>
+</head>
+<body>
+    <!-- Navigation Header -->
+    <header class="main-header">
+        <div class="container">
+            <div class="nav-brand">
+                <div class="brand-logo">
+                    <img src="assets/images/Misterpips.jpg" alt="Misterpips Logo" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;">
+                </div>
+                <span class="brand-text">Misterpips</span>
+            </div>
+            <nav class="main-nav">
+                <a href="#home" class="nav-link active">Accueil</a>
+                <a href="#features" class="nav-link">Fonctionnalités</a>
+                <a href="#blog" class="nav-link">Actualités</a>
+                <a href="#testimonials" class="nav-link">Témoignages</a>
+                <a href="#about" class="nav-link">À propos</a>
+                <a href="#contact" class="nav-link">Contact</a>
+                <button id="loginBtn" class="btn-vip">🔑 Connexion VIP</button>
+            </nav>
+            <div class="mobile-menu-toggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero-section">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <span class="gradient-text">Misterpips</span>
+                    <span class="subtitle">Trading Professionnel</span>
+                </h1>
+                <p class="hero-description">
+                    Rejoignez notre communauté VIP et accédez aux outils de trading les plus avancés
+                </p>
+                <div class="hero-actions">
+                    <button id="accessVip" class="btn-primary-large">
+                        <i class="fas fa-crown"></i>
+                        Accéder à l'Espace VIP
+                    </button>
+                    <a href="https://t.me/misterpips_support" class="btn-secondary-large" target="_blank">
+                        <i class="fab fa-telegram"></i>
+                        Support Telegram
+                    </a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="trading-card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Performance Live</span>
+                    </div>
+                    <div class="card-stats">
+                        <div class="stat">
+                            <span class="value">+2,847$</span>
+                            <span class="label">Profit Total</span>
+                        </div>
+                        <div class="stat">
+                            <span class="value">87.3%</span>
+                            <span class="label">Win Rate</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Fonctionnalités Premium</h2>
+                <p>Des outils professionnels pour maximiser vos performances</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-area"></i>
+                    </div>
+                    <h3>Dashboard Avancé</h3>
+                    <p>Interface complète avec graphiques temps réel et analytics</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <h3>Planning Forex</h3>
+                    <p>Calendrier économique et planification des trades</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3>Chat VIP</h3>
+                    <p>Communication directe avec les experts traders</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-trophy"></i>
+                    </div>
+                    <h3>Classement</h3>
+                    <p>Compétition et ranking entre traders VIP</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Blog/News Section -->
+    <section id="blog" class="blog-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Actualités & Analyses</h2>
+                <p>Les dernières actualités et analyses de trading</p>
+            </div>
+            <div id="blogPosts" class="blog-grid">
+                <!-- Posts will be loaded here -->
+            </div>
+            <div class="blog-actions">
+                <button id="loadMorePosts" class="btn-secondary-large" style="display: none;">Voir plus d'articles</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section id="testimonials" class="testimonials-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Témoignages de nos Traders</h2>
+                <p>Ce que disent nos membres VIP</p>
+            </div>
+            <div id="testimonialsContainer" class="testimonials-container">
+                <!-- Testimonials will be loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Gallery Section -->
+    <section id="gallery" class="gallery-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Galerie</h2>
+                <p>Captures d'écran et résultats de trading</p>
+            </div>
+            <div id="galleryContainer" class="gallery-container">
+                <!-- Gallery images will be loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="about-section">
+        <div class="container">
+            <div class="about-content">
+                <div class="about-text">
+                    <h2>À propos de Misterpips</h2>
+                    <p>Plateforme de trading professionnelle dédiée aux traders sérieux qui souhaitent améliorer leurs performances et rejoindre une communauté d'élite.</p>
+                    <div class="about-stats">
+                        <div class="about-stat">
+                            <span class="stat-number">500+</span>
+                            <span class="stat-label">Traders VIP</span>
+                        </div>
+                        <div class="about-stat">
+                            <span class="stat-number">87%</span>
+                            <span class="stat-label">Taux de réussite</span>
+                        </div>
+                        <div class="about-stat">
+                            <span class="stat-number">24/7</span>
+                            <span class="stat-label">Support</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="about-visual">
+                    <div class="about-image">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="contact-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Nous Contacter</h2>
+                <p>Rejoignez notre communauté sur les réseaux sociaux</p>
+            </div>
+            <div class="contact-grid">
+                <a href="https://www.instagram.com/EVAN4SLM/" class="contact-card instagram" target="_blank">
+                    <i class="fab fa-instagram"></i>
+                    <span>@EVAN4SLM</span>
+                </a>
+                <a href="https://www.tiktok.com/@MISTERPIPS3" class="contact-card tiktok" target="_blank">
+                    <i class="fab fa-tiktok"></i>
+                    <span>@MISTERPIPS3</span>
+                </a>
+                <a href="https://t.me/misterpips_support" class="contact-card telegram" target="_blank">
+                    <i class="fab fa-telegram"></i>
+                    <span>Support</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="footer-logo">
+                        <img src="assets/images/Misterpips.jpg" alt="Misterpips Logo" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+                    </div>
+                    <p>Votre partenaire de trading professionnel</p>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-section">
+                        <h4>Plateforme</h4>
+                        <a href="#features">Fonctionnalités</a>
+                        <a href="#about">À propos</a>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Support</h4>
+                        <a href="https://t.me/misterpips_support" target="_blank">Telegram</a>
+                        <a href="#contact">Contact</a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2025 Misterpips. Tous droits réservés.</p>
+                <p class="disclaimer">Le trading comporte des risques financiers.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>Connexion VIP</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-content">
+                <form id="loginForm" class="login-form">
+                    <div class="form-group">
+                        <label>Email VIP</label>
+                        <input type="email" id="loginEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Mot de passe</label>
+                        <input type="password" id="loginPassword" required>
+                    </div>
+                    <button type="submit" class="btn-login">
+                        <i class="fas fa-sign-in-alt"></i>
+                        Se connecter
+                    </button>
+                </form>
+                <div class="modal-footer">
+                    <p>Pas encore membre VIP ?</p>
+                    <button id="contactSupport" class="btn-support">
+                        <i class="fas fa-headset"></i>
+                        Contacter le Support
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts for Content Loading -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+        import { getDatabase, ref, get } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSDK0NfVSs_VQb3TnrixiJbOpTsmoUMvU",
+            authDomain: "misterpips-b71fb.firebaseapp.com",
+            databaseURL: "https://misterpips-b71fb-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "misterpips-b71fb",
+            storageBucket: "misterpips-b71fb.firebasestorage.app",
+            messagingSenderId: "574231126409",
+            appId: "1:574231126409:web:b7ed93ac4ea62e247dc158"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        
+        window.contentDB = db;
+        window.contentRef = ref;
+        window.contentGet = get;
+        
+        // Charger le contenu au chargement de la page
+        document.addEventListener('DOMContentLoaded', loadContent);
+        
+        async function loadContent() {
+            await loadSiteConfig();
+            await loadSiteContent();
+            await loadBlogPosts();
+            await loadTestimonials();
+            await loadGallery();
+        }
+        
+        async function loadSiteContent() {
+            try {
+                // Charger contenu page d'accueil
+                const homeRef = ref(db, 'siteContent/home');
+                const homeSnapshot = await get(homeRef);
+                
+                if (homeSnapshot.exists()) {
+                    const homeData = homeSnapshot.val();
+                    
+                    // Mettre à jour le titre hero
+                    const heroTitle = document.querySelector('.hero-title .gradient-text');
+                    const heroSubtitle = document.querySelector('.hero-title .subtitle');
+                    const heroDesc = document.querySelector('.hero-description');
+                    const heroBtn = document.getElementById('accessVip');
+                    
+                    if (heroTitle) heroTitle.textContent = homeData.title || 'Misterpips';
+                    if (heroSubtitle) heroSubtitle.textContent = homeData.subtitle || 'Trading Professionnel';
+                    if (heroDesc) heroDesc.textContent = homeData.description || 'Rejoignez notre communauté VIP et accédez aux outils de trading les plus avancés';
+                    if (heroBtn) {
+                        heroBtn.innerHTML = `<i class="fas fa-crown"></i>${homeData.btnText || 'Accéder à l\'Espace VIP'}`;
+                    }
+                }
+                
+                // Charger contenu section à propos
+                const aboutRef = ref(db, 'siteContent/about');
+                const aboutSnapshot = await get(aboutRef);
+                
+                if (aboutSnapshot.exists()) {
+                    const aboutData = aboutSnapshot.val();
+                    
+                    const aboutTitle = document.querySelector('.about-text h2');
+                    const aboutDesc = document.querySelector('.about-text p');
+                    
+                    if (aboutTitle) aboutTitle.textContent = aboutData.title || 'À propos de Misterpips';
+                    if (aboutDesc) aboutDesc.textContent = aboutData.description || 'Plateforme de trading professionnelle dédiée aux traders sérieux qui souhaitent améliorer leurs performances et rejoindre une communauté d\'élite.';
+                }
+            } catch (error) {
+                console.error('Erreur chargement contenu site:', error);
+            }
+        }
+        
+        async function loadSiteConfig() {
+            try {
+                const configRef = ref(db, 'siteConfig');
+                const snapshot = await get(configRef);
+                
+                if (snapshot.exists()) {
+                    const config = snapshot.val();
+                    
+                    // Mettre à jour les stats hero
+                    const profitElement = document.querySelector('.stat .value');
+                    const winRateElement = document.querySelectorAll('.stat .value')[1];
+                    if (profitElement) profitElement.textContent = config.heroProfit || '+2,847$';
+                    if (winRateElement) winRateElement.textContent = config.heroWinRate || '87.3%';
+                    
+                    // Mettre à jour les stats VIP
+                    const statNumbers = document.querySelectorAll('.stat-number');
+                    if (statNumbers[0]) statNumbers[0].textContent = config.tradersCount || '500+';
+                    if (statNumbers[1]) statNumbers[1].textContent = config.successRate || '87%';
+                    if (statNumbers[2]) statNumbers[2].textContent = config.supportTime || '24/7';
+                    
+                    // Mettre à jour les stats about
+                    const aboutStats = document.querySelectorAll('.about-stat .stat-number');
+                    if (aboutStats[0]) aboutStats[0].textContent = config.aboutTraders || '500+';
+                    if (aboutStats[1]) aboutStats[1].textContent = config.aboutSuccess || '87%';
+                    if (aboutStats[2]) aboutStats[2].textContent = config.aboutSupport || '24/7';
+                    
+                    // Mettre à jour les stats communauté VIP
+                    const vipStats = document.querySelectorAll('.vip-stats .stat-number');
+                    if (vipStats[0]) vipStats[0].textContent = config.tradersCount || '500+';
+                    if (vipStats[1]) vipStats[1].textContent = config.successRate || '87.3%';
+                    if (vipStats[2]) vipStats[2].textContent = config.totalProfits || '2.8M$';
+                    if (vipStats[3]) vipStats[3].textContent = config.supportTime || '24/7';
+                }
+            } catch (error) {
+                console.error('Erreur chargement config site:', error);
+            }
+        }
+        
+        async function loadBlogPosts() {
+            try {
+                const postsRef = ref(db, 'content/posts');
+                const snapshot = await get(postsRef);
+                
+                if (snapshot.exists()) {
+                    const posts = Object.entries(snapshot.val())
+                        .map(([id, data]) => ({ id, ...data }))
+                        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                        .slice(0, 6);
+                    
+                    displayBlogPosts(posts);
+                }
+            } catch (error) {
+                console.error('Erreur chargement posts:', error);
+            }
+        }
+        
+        function displayBlogPosts(posts) {
+            const container = document.getElementById('blogPosts');
+            if (!container) return;
+            
+            if (posts.length === 0) {
+                container.innerHTML = '<div class="no-content">Aucun article disponible pour le moment.</div>';
+                return;
+            }
+            
+            container.innerHTML = posts.map(post => `
+                <article class="blog-card">
+                    ${post.image ? `<div class="blog-image"><img src="${post.image}" alt="${post.title}"></div>` : ''}
+                    <div class="blog-content">
+                        <div class="blog-category">${post.category || 'Trading'}</div>
+                        <h3>${post.title}</h3>
+                        <p>${post.excerpt || post.content.substring(0, 120)}...</p>
+                        <div class="blog-meta">
+                            <span><i class="fas fa-calendar"></i> ${new Date(post.createdAt).toLocaleDateString()}</span>
+                            <span><i class="fas fa-eye"></i> ${post.views || 0}</span>
+                        </div>
+                    </div>
+                </article>
+            `).join('');
+        }
+        
+        async function loadTestimonials() {
+            try {
+                const testimonialsRef = ref(db, 'content/testimonials');
+                const snapshot = await get(testimonialsRef);
+                
+                if (snapshot.exists()) {
+                    const testimonials = Object.entries(snapshot.val())
+                        .map(([id, data]) => ({ id, ...data }))
+                        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                        .slice(0, 3);
+                    
+                    displayTestimonials(testimonials);
+                }
+            } catch (error) {
+                console.error('Erreur chargement témoignages:', error);
+            }
+        }
+        
+        function displayTestimonials(testimonials) {
+            const container = document.getElementById('testimonialsContainer');
+            if (!container) return;
+            
+            if (testimonials.length === 0) {
+                container.innerHTML = '<div class="no-content">Aucun témoignage disponible pour le moment.</div>';
+                return;
+            }
+            
+            container.innerHTML = testimonials.map(testimonial => `
+                <div class="testimonial-item">
+                    <div class="testimonial-quote">
+                        <i class="fas fa-quote-left"></i>
+                        <p>${testimonial.content}</p>
+                    </div>
+                    <div class="testimonial-author">
+                        ${testimonial.avatar ? `<img src="${testimonial.avatar}" alt="${testimonial.name}">` : '<div class="avatar-default"><i class="fas fa-user"></i></div>'}
+                        <div class="author-details">
+                            <h4>${testimonial.name}</h4>
+                            <span>${testimonial.title || 'Trader VIP'}</span>
+                            <div class="rating">${'★'.repeat(testimonial.rating || 5)}</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        async function loadGallery() {
+            try {
+                const galleryRef = ref(db, 'content/gallery');
+                const snapshot = await get(galleryRef);
+                
+                if (snapshot.exists()) {
+                    const images = Object.entries(snapshot.val())
+                        .map(([id, data]) => ({ id, ...data }))
+                        .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))
+                        .slice(0, 8);
+                    
+                    displayGallery(images);
+                }
+            } catch (error) {
+                console.error('Erreur chargement galerie:', error);
+            }
+        }
+        
+        function displayGallery(images) {
+            const container = document.getElementById('galleryContainer');
+            if (!container) return;
+            
+            if (images.length === 0) {
+                container.innerHTML = '<div class="no-content">Aucune image disponible pour le moment.</div>';
+                return;
+            }
+            
+            container.innerHTML = images.map(image => `
+                <div class="gallery-item">
+                    <img src="${image.url}" alt="${image.title}" onclick="openImageModal('${image.url}', '${image.title}')">
+                    <div class="gallery-overlay">
+                        <h4>${image.title}</h4>
+                        <p>${image.description || ''}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        window.openImageModal = function(url, title) {
+            const modal = document.createElement('div');
+            modal.className = 'image-modal';
+            modal.innerHTML = `
+                <div class="image-modal-content">
+                    <span class="image-modal-close" onclick="this.parentElement.parentElement.remove()">&times;</span>
+                    <img src="${url}" alt="${title}">
+                    <h3>${title}</h3>
+                </div>
+            `;
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+            document.body.appendChild(modal);
+        };
+    </script>
+    
+    <script src="assets/js/main.js"></script>
+</body>
+</html>

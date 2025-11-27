@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestionnaire de Contenu - Misterpips</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase Scripts -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+        import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
+        // Pas besoin de Firebase Storage - utilisation Database
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSDK0NfVSs_VQb3TnrixiJbOpTsmoUMvU",
+            authDomain: "misterpips-b71fb.firebaseapp.com",
+            databaseURL: "https://misterpips-b71fb-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "misterpips-b71fb",
+            storageBucket: "misterpips-b71fb.firebasestorage.app",
+            messagingSenderId: "574231126409",
+            appId: "1:574231126409:web:b7ed93ac4ea62e247dc158"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        // Storage désactivé - utilisation Database
+        
+        window.firebaseDB = db;
+        window.firebaseAuth = auth;
+        window.dbRef = ref;
+        window.dbGet = get;
+        window.dbSet = set;
+        window.onValue = onValue;
+        window.signOut = signOut;
+        
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+            } else {
+                document.getElementById('userEmail').textContent = user.email;
+            }
+        });
+        
+        console.log('✅ Firebase Content Manager initialisé');
+    </script>
+</head>
+<body class="dashboard-body">
+    <!-- Header -->
+    <header class="dashboard-header">
+        <div class="header-container">
+            <div class="header-left">
+                <button id="backBtn" class="back-btn" onclick="window.location.href='vip-space.html'">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="brand-section">
+                    <div class="brand-logo">
+                        <img src="assets/images/Misterpips.jpg" alt="Misterpips Logo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                    </div>
+                    <div class="brand-info">
+                        <h1>Gestionnaire de Contenu</h1>
+                        <span class="brand-subtitle">Alimenter le site</span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <i class="fas fa-edit"></i>
+                    </div>
+                    <div class="user-details">
+                        <span id="userEmail" class="user-email"></span>
+                        <span class="user-status">Éditeur VIP</span>
+                    </div>
+                </div>
+                <button id="logoutBtn" class="logout-btn" onclick="contentManager.logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="dashboard-main">
+        <!-- Sidebar -->
+        <aside class="dashboard-sidebar">
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <h3>Contenu</h3>
+                    <a href="#posts" class="nav-item active" onclick="contentManager.showPosts()">
+                        <i class="fas fa-newspaper"></i>
+                        <span>Articles/Posts</span>
+                    </a>
+                    <a href="#gallery" class="nav-item" onclick="contentManager.showGallery()">
+                        <i class="fas fa-images"></i>
+                        <span>Galerie</span>
+                    </a>
+                    <a href="#testimonials" class="nav-item" onclick="contentManager.showTestimonials()">
+                        <i class="fas fa-quote-left"></i>
+                        <span>Témoignages</span>
+                    </a>
+                </div>
+                <div class="nav-section">
+                    <h3>Pages</h3>
+                    <a href="#home" class="nav-item" onclick="contentManager.editHomePage()">
+                        <i class="fas fa-home"></i>
+                        <span>Page d'accueil</span>
+                    </a>
+                    <a href="#about" class="nav-item" onclick="contentManager.editAboutPage()">
+                        <i class="fas fa-info-circle"></i>
+                        <span>À propos</span>
+                    </a>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Content Area -->
+        <div class="dashboard-content">
+            <!-- Quick Actions -->
+            <section class="actions-section">
+                <div class="actions-header">
+                    <h2>Actions Rapides</h2>
+                </div>
+                <div class="actions-grid">
+                    <button class="action-btn primary" onclick="contentManager.createPost()">
+                        <i class="fas fa-plus"></i>
+                        <span>Nouvel Article</span>
+                    </button>
+                    <button class="action-btn secondary" onclick="contentManager.uploadImage()">
+                        <i class="fas fa-upload"></i>
+                        <span>Upload Image</span>
+                    </button>
+                    <button class="action-btn info" onclick="contentManager.addTestimonial()">
+                        <i class="fas fa-star"></i>
+                        <span>Témoignage</span>
+                    </button>
+                    <button class="action-btn warning" onclick="contentManager.previewSite()">
+                        <i class="fas fa-eye"></i>
+                        <span>Aperçu Site</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Posts Section -->
+            <section id="postsSection" class="content-section">
+                <div class="section-header">
+                    <h2>Articles & Posts</h2>
+                    <button class="btn-primary" onclick="contentManager.createPost()">
+                        <i class="fas fa-plus"></i>
+                        Nouveau Post
+                    </button>
+                </div>
+                <div class="posts-grid" id="postsGrid">
+                    <!-- Posts will be loaded here -->
+                </div>
+            </section>
+
+            <!-- Gallery Section -->
+            <section id="gallerySection" class="content-section" style="display: none;">
+                <div class="section-header">
+                    <h2>Galerie d'Images</h2>
+                    <button class="btn-primary" onclick="contentManager.uploadImage()">
+                        <i class="fas fa-upload"></i>
+                        Upload Image
+                    </button>
+                </div>
+                <div class="gallery-grid" id="galleryGrid">
+                    <!-- Images will be loaded here -->
+                </div>
+            </section>
+
+            <!-- Testimonials Section -->
+            <section id="testimonialsSection" class="content-section" style="display: none;">
+                <div class="section-header">
+                    <h2>Témoignages</h2>
+                    <button class="btn-primary" onclick="contentManager.addTestimonial()">
+                        <i class="fas fa-plus"></i>
+                        Nouveau Témoignage
+                    </button>
+                </div>
+                <div class="testimonials-grid" id="testimonialsGrid">
+                    <!-- Testimonials will be loaded here -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Modal -->
+    <div id="contentModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="modalTitle">Gestionnaire de Contenu</h2>
+                <button class="modal-close" onclick="contentManager.closeModal()">&times;</button>
+            </div>
+            <div class="modal-content">
+                <div id="modalContent">
+                    <!-- Modal content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/content-manager.js"></script>
+</body>
+</html>

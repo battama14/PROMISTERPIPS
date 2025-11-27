@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Classement VIP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #0a0e27;
+            color: white;
+            padding: 2rem;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #1e2139;
+            padding: 2rem;
+            border-radius: 12px;
+        }
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+        }
+        button {
+            background: linear-gradient(135deg, #00d4ff, #5b86e5);
+            border: none;
+            padding: 0.75rem 1.5rem;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 0.5rem;
+        }
+        #rankingList {
+            margin-top: 1rem;
+        }
+        .ranking-item {
+            display: flex !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            padding: 1rem !important;
+            margin: 0.5rem 0 !important;
+            background: #2a2d47 !important;
+            border-radius: 8px !important;
+            border: 1px solid #444 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🏆 Test du Classement VIP</h1>
+        
+        <div class="test-section">
+            <h2>Informations Utilisateur</h2>
+            <p>UID: <span id="currentUID">Non connecté</span></p>
+            <p>Email: <span id="currentEmail">Non connecté</span></p>
+            <p>Pseudo: <span id="currentPseudo">Aucun</span></p>
+            <button onclick="testPseudo()">Tester Changement Pseudo</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>Test Firebase</h2>
+            <p>Status: <span id="firebaseStatus">Vérification...</span></p>
+            <button onclick="testFirebase()">Tester Connexion Firebase</button>
+            <button onclick="testSaveData()">Tester Sauvegarde</button>
+        </div>
+        
+        <div class="test-section">
+            <h2>Test Classement</h2>
+            <button onclick="testRanking()">Charger Classement</button>
+            <button onclick="addTestData()">Ajouter Données Test</button>
+            <div id="rankingList"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Logs</h2>
+            <div id="logs" style="background: #000; padding: 1rem; border-radius: 4px; font-family: monospace; font-size: 0.8rem; max-height: 200px; overflow-y: auto;"></div>
+        </div>
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+        import { getDatabase, ref, set, get } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSDK0NfVSs_VQb3TnrixiJbOpTsmoUMvU",
+            authDomain: "misterpips-b71fb.firebaseapp.com",
+            databaseURL: "https://misterpips-b71fb-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "misterpips-b71fb",
+            storageBucket: "misterpips-b71fb.firebasestorage.app",
+            messagingSenderId: "574231126409",
+            appId: "1:574231126409:web:b7ed93ac4ea62e247dc158"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        
+        window.firebaseDB = db;
+        window.firebaseAuth = auth;
+        window.dbRef = ref;
+        window.dbGet = get;
+        window.dbSet = set;
+        
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('currentUID').textContent = user.uid;
+                document.getElementById('currentEmail').textContent = user.email;
+                document.getElementById('firebaseStatus').textContent = '✅ Connecté';
+                
+                const pseudo = localStorage.getItem(`pseudo_${user.uid}`);
+                document.getElementById('currentPseudo').textContent = pseudo || 'Aucun';
+                
+                log('✅ Utilisateur connecté: ' + user.email);
+            } else {
+                document.getElementById('firebaseStatus').textContent = '❌ Non connecté';
+                log('❌ Aucun utilisateur connecté');
+            }
+        });
+        
+        log('🔥 Firebase initialisé');
+    </script>
+    
+    <script src="components/ranking.js"></script>
+    
+    <script>
+        function log(message) {
+            const logs = document.getElementById('logs');
+            const time = new Date().toLocaleTimeString();
+            logs.innerHTML += `[${time}] ${message}<br>`;
+            logs.scrollTop = logs.scrollHeight;
+            console.log(message);
+        }
+        
+        function testPseudo() {
+            const newPseudo = prompt('Entrez un nouveau pseudo:');
+            if (newPseudo && window.firebaseAuth?.currentUser) {
+                const uid = window.firebaseAuth.currentUser.uid;
+                localStorage.setItem(`pseudo_${uid}`, newPseudo);
+                document.getElementById('currentPseudo').textContent = newPseudo;
+                log('✅ Pseudo mis à jour: ' + newPseudo);
+            }
+        }
+        
+        function testFirebase() {
+            if (window.firebaseDB && window.firebaseAuth?.currentUser) {
+                log('✅ Firebase disponible');
+                log('✅ Utilisateur connecté');
+            } else {
+                log('❌ Firebase ou utilisateur non disponible');
+            }
+        }
+        
+        async function testSaveData() {
+            if (!window.firebaseAuth?.currentUser) {
+                log('❌ Aucun utilisateur connecté');
+                return;
+            }
+            
+            try {
+                const uid = window.firebaseAuth.currentUser.uid;
+                const testData = {
+                    email: window.firebaseAuth.currentUser.email,
+                    pseudo: localStorage.getItem(`pseudo_${uid}`) || 'TestUser',
+                    isVIP: true,
+                    accounts: {
+                        compte1: {
+                            trades: [
+                                {
+                                    id: 'test_1',
+                                    currency: 'EUR/USD',
+                                    type: 'BUY',
+                                    pnl: 25.50,
+                                    status: 'closed',
+                                    date: new Date().toISOString().split('T')[0]
+                                },
+                                {
+                                    id: 'test_2',
+                                    currency: 'GBP/USD',
+                                    type: 'SELL',
+                                    pnl: -15.30,
+                                    status: 'closed',
+                                    date: new Date().toISOString().split('T')[0]
+                                }
+                            ]
+                        }
+                    },
+                    lastUpdated: new Date().toISOString()
+                };
+                
+                const userRef = window.dbRef(window.firebaseDB, `users/${uid}`);
+                await window.dbSet(userRef, testData);
+                log('✅ Données test sauvegardées');
+            } catch (error) {
+                log('❌ Erreur sauvegarde: ' + error.message);
+            }
+        }
+        
+        function testRanking() {
+            try {
+                if (window.RankingVIP) {
+                    const ranking = new window.RankingVIP();
+                    log('✅ Classement VIP créé');
+                } else {
+                    log('❌ RankingVIP non disponible');
+                }
+            } catch (error) {
+                log('❌ Erreur classement: ' + error.message);
+            }
+        }
+        
+        async function addTestData() {
+            if (!window.firebaseDB) {
+                log('❌ Firebase non disponible');
+                return;
+            }
+            
+            try {
+                // Ajouter plusieurs utilisateurs test
+                const testUsers = [
+                    {
+                        uid: 'test_user_1',
+                        email: 'trader1@test.com',
+                        pseudo: 'ProTrader1',
+                        trades: [
+                            { id: 't1', pnl: 150.50, status: 'closed' },
+                            { id: 't2', pnl: 75.25, status: 'closed' },
+                            { id: 't3', pnl: -25.00, status: 'closed' }
+                        ]
+                    },
+                    {
+                        uid: 'test_user_2',
+                        email: 'trader2@test.com',
+                        pseudo: 'MasterTrader',
+                        trades: [
+                            { id: 't4', pnl: 200.75, status: 'closed' },
+                            { id: 't5', pnl: -50.30, status: 'closed' }
+                        ]
+                    }
+                ];
+                
+                for (const user of testUsers) {
+                    const userData = {
+                        email: user.email,
+                        pseudo: user.pseudo,
+                        isVIP: true,
+                        accounts: {
+                            compte1: {
+                                trades: user.trades
+                            }
+                        },
+                        lastUpdated: new Date().toISOString()
+                    };
+                    
+                    const userRef = window.dbRef(window.firebaseDB, `users/${user.uid}`);
+                    await window.dbSet(userRef, userData);
+                }
+                
+                log('✅ Données test ajoutées');
+                
+                // Recharger le classement
+                setTimeout(() => {
+                    testRanking();
+                }, 1000);
+                
+            } catch (error) {
+                log('❌ Erreur ajout données: ' + error.message);
+            }
+        }
+        
+        // Auto-test au chargement
+        setTimeout(() => {
+            log('🚀 Démarrage des tests automatiques...');
+            testFirebase();
+        }, 2000);
+    </script>
+</body>
+</html>

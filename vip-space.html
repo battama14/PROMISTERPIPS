@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace VIP - Misterpips</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/vip-space.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase Scripts -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+        import { getDatabase } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSDK0NfVSs_VQb3TnrixiJbOpTsmoUMvU",
+            authDomain: "misterpips-b71fb.firebaseapp.com",
+            databaseURL: "https://misterpips-b71fb-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "misterpips-b71fb",
+            storageBucket: "misterpips-b71fb.firebasestorage.app",
+            messagingSenderId: "574231126409",
+            appId: "1:574231126409:web:b7ed93ac4ea62e247dc158"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const database = getDatabase(app);
+        
+        window.firebaseAuth = auth;
+        window.firebaseDB = database;
+        window.signOut = signOut;
+        
+        // Vérifier authentification
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+            } else {
+                document.getElementById('userEmail').textContent = user.email;
+                // Vérifier si admin
+                if (user.uid === 'tr8b3TuRAeTKAqT9kx00YmQa6gA3') {
+                    document.getElementById('adminAccess').style.display = 'block';
+                    document.getElementById('contentAccess').style.display = 'block';
+                }
+            }
+        });
+        
+        console.log('✅ Firebase VIP Space initialisé');
+    </script>
+</head>
+<body>
+    <!-- Header VIP -->
+    <header class="vip-header">
+        <div class="container">
+            <div class="vip-nav-brand">
+                <button id="backBtn" class="back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="brand-logo">
+                    <img src="assets/images/Misterpips.jpg" alt="Misterpips Logo" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                </div>
+                <span class="brand-text">Espace VIP</span>
+            </div>
+            <div class="vip-user-info">
+                <span id="userEmail" class="user-email"></span>
+                <button id="logoutBtn" class="logout-btn">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Déconnexion
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- VIP Welcome Section -->
+    <section class="vip-welcome">
+        <div class="container">
+            <div class="welcome-content">
+                <div class="welcome-icon">
+                    <i class="fas fa-crown"></i>
+                </div>
+                <h1>Bienvenue dans l'Espace VIP</h1>
+                <p>Accédez à tous vos outils de trading professionnels</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- VIP Navigation Cards -->
+    <section class="vip-navigation">
+        <div class="container">
+            <div class="nav-grid">
+                <!-- Dashboard Card -->
+                <div class="nav-card dashboard-card" onclick="window.location.href='dashboard.html'">
+                    <div class="card-icon">
+                        <i class="fas fa-chart-area"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Dashboard Trading</h3>
+                        <p>Interface complète avec graphiques, trades et analytics</p>
+                        <div class="card-features">
+                            <span><i class="fas fa-check"></i> Graphiques temps réel</span>
+                            <span><i class="fas fa-check"></i> Gestion des trades</span>
+                            <span><i class="fas fa-check"></i> Statistiques avancées</span>
+                        </div>
+                    </div>
+                    <div class="card-action">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+
+                <!-- Planning Forex Card -->
+                <div class="nav-card planning-card" onclick="window.location.href='planning-forex.html'">
+                    <div class="card-icon">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Planning Forex</h3>
+                        <p>Calendrier économique et planification des sessions</p>
+                        <div class="card-features">
+                            <span><i class="fas fa-check"></i> Événements économiques</span>
+                            <span><i class="fas fa-check"></i> Sessions de trading</span>
+                            <span><i class="fas fa-check"></i> Analyses techniques</span>
+                        </div>
+                    </div>
+                    <div class="card-action">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+
+
+
+                <!-- Mobile Dashboard Card -->
+                <div class="nav-card mobile-card" onclick="window.location.href='mobile-dashboard.html'">
+                    <div class="card-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Dashboard Mobile</h3>
+                        <p>Version optimisée pour smartphones et tablettes</p>
+                        <div class="card-features">
+                            <span><i class="fas fa-check"></i> Interface tactile</span>
+                            <span><i class="fas fa-check"></i> Notifications push</span>
+                            <span><i class="fas fa-check"></i> Mode hors ligne</span>
+                        </div>
+                    </div>
+                    <div class="card-action">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+
+                <!-- Content Manager Card (Admin only) -->
+                <div id="contentAccess" class="nav-card content-card" onclick="window.location.href='content-manager.html'" style="display: none;">
+                    <div class="card-icon">
+                        <i class="fas fa-edit"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Gestionnaire de Contenu</h3>
+                        <p>Alimenter le site avec du contenu et des images</p>
+                        <div class="card-features">
+                            <span><i class="fas fa-check"></i> Articles & Posts</span>
+                            <span><i class="fas fa-check"></i> Galerie d'images</span>
+                            <span><i class="fas fa-check"></i> Témoignages</span>
+                        </div>
+                    </div>
+                    <div class="card-action">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+
+                <!-- Admin Access Card (Hidden by default) -->
+                <div id="adminAccess" class="nav-card admin-card" onclick="window.location.href='admin-dashboard.html'" style="display: none;">
+                    <div class="card-icon">
+                        <i class="fas fa-cog"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Administration</h3>
+                        <p>Gestion des utilisateurs et configuration système</p>
+                        <div class="card-features">
+                            <span><i class="fas fa-check"></i> Gestion utilisateurs</span>
+                            <span><i class="fas fa-check"></i> Analytics globales</span>
+                            <span><i class="fas fa-check"></i> Configuration site</span>
+                        </div>
+                    </div>
+                    <div class="card-action">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VIP Stats Section -->
+    <section class="vip-stats">
+        <div class="container">
+            <div class="stats-header">
+                <h2>Statistiques de la Communauté VIP</h2>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-number">500+</span>
+                        <span class="stat-label">Traders VIP</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-number">87.3%</span>
+                        <span class="stat-label">Taux de réussite</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-number">2.8M$</span>
+                        <span class="stat-label">Profits cumulés</span>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-number">24/7</span>
+                        <span class="stat-label">Support actif</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Actions -->
+    <section class="quick-actions">
+        <div class="container">
+            <div class="actions-header">
+                <h2>Actions Rapides</h2>
+            </div>
+            <div class="actions-grid">
+                <button class="action-btn" onclick="window.open('https://t.me/misterpips_support', '_blank')">
+                    <i class="fab fa-telegram"></i>
+                    <span>Support Telegram</span>
+                </button>
+                <button class="action-btn" onclick="window.location.href='dashboard.html'">
+                    <i class="fas fa-plus"></i>
+                    <span>Nouveau Trade</span>
+                </button>
+                <button class="action-btn" onclick="window.location.href='planning-forex.html'">
+                    <i class="fas fa-calendar"></i>
+                    <span>Voir Planning</span>
+                </button>
+                <button class="action-btn" onclick="downloadApp()">
+                    <i class="fas fa-download"></i>
+                    <span>Installer App</span>
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <script src="assets/js/vip-space.js"></script>
+</body>
+</html>
