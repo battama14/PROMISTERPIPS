@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Dashboard Mobile - Misterpips VIP</title>
+    <link rel="stylesheet" href="assets/css/mobile-dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta name="theme-color" content="#00d4ff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Misterpips">
+    <link rel="apple-touch-icon" href="assets/images/Misterpips.jpg">
+    
+    <!-- Firebase Scripts -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+        import { getDatabase, ref, set, get, onValue, push } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
+        import { getMessaging, getToken, onMessage } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSDK0NfVSs_VQb3TnrixiJbOpTsmoUMvU",
+            authDomain: "misterpips-b71fb.firebaseapp.com",
+            databaseURL: "https://misterpips-b71fb-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "misterpips-b71fb",
+            storageBucket: "misterpips-b71fb.firebasestorage.app",
+            messagingSenderId: "574231126409",
+            appId: "1:574231126409:web:b7ed93ac4ea62e247dc158"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        
+        window.firebaseDB = db;
+        window.firebaseAuth = auth;
+        window.dbRef = ref;
+        window.dbGet = get;
+        window.dbSet = set;
+        window.onValue = onValue;
+        window.push = push;
+        window.signOut = signOut;
+        
+        // Notifications
+        try {
+            const messaging = getMessaging(app);
+            window.firebaseMessaging = messaging;
+            window.getToken = getToken;
+            window.onMessage = onMessage;
+        } catch (error) {
+            console.log('Messaging non supporté:', error);
+        }
+        
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+            } else {
+                sessionStorage.setItem('firebaseUID', user.uid);
+                sessionStorage.setItem('userEmail', user.email);
+                
+                const savedPseudo = localStorage.getItem(`pseudo_${user.uid}`);
+                const displayElement = document.getElementById('userDisplay');
+                if (displayElement) {
+                    displayElement.textContent = savedPseudo || user.email.split('@')[0];
+                }
+            }
+        });
+        
+        console.log('✅ Firebase Mobile initialisé');
+    </script>
+</head>
+<body class="mobile-body">
+    <!-- Mobile Header -->
+    <header class="mobile-header">
+        <div class="header-content">
+            <button id="backBtn" class="header-btn" onclick="window.location.href='vip-space.html'">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div class="header-title">
+                <img src="assets/images/Misterpips.jpg" alt="Logo" class="header-logo">
+                <span>Dashboard</span>
+            </div>
+            <button id="menuBtn" class="header-btn" onclick="mobileDashboard.toggleMenu()">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobileMenu" class="mobile-menu">
+        <div class="menu-header">
+            <div class="user-info">
+                <div class="user-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+                <div class="user-details">
+                    <span id="userDisplay" class="user-name"></span>
+                    <span class="user-status">VIP Member</span>
+                </div>
+            </div>
+            <button class="menu-close" onclick="mobileDashboard.toggleMenu()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <nav class="menu-nav">
+            <a href="#overview" class="menu-item active" onclick="mobileDashboard.showSection('overview')">
+                <i class="fas fa-chart-area"></i>
+                <span>Vue d'ensemble</span>
+            </a>
+            <a href="#trades" class="menu-item" onclick="mobileDashboard.showSection('trades')">
+                <i class="fas fa-exchange-alt"></i>
+                <span>Mes Trades</span>
+            </a>
+            <a href="#ranking" class="menu-item" onclick="mobileDashboard.showSection('ranking')">
+                <i class="fas fa-trophy"></i>
+                <span>Classement</span>
+            </a>
+            <a href="#settings" class="menu-item" onclick="mobileDashboard.showSection('settings')">
+                <i class="fas fa-cog"></i>
+                <span>Paramètres</span>
+            </a>
+            <a href="#" class="menu-item" onclick="mobileDashboard.logout()">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Déconnexion</span>
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <main class="mobile-main">
+        <!-- Overview Section -->
+        <section id="overviewSection" class="mobile-section active">
+            <!-- Stats Cards -->
+            <div class="stats-container">
+                <div class="stat-card primary">
+                    <div class="stat-icon">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="mobileCapital">$1,000</span>
+                        <span class="stat-label">Capital</span>
+                        <span class="stat-change positive" id="mobileCapitalChange">+2.5%</span>
+                    </div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-icon">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="mobileWinRate">0%</span>
+                        <span class="stat-label">Win Rate</span>
+                        <span class="stat-change positive" id="mobileWinRateChange">+5.2%</span>
+                    </div>
+                </div>
+                <div class="stat-card info">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="mobilePnL">$0</span>
+                        <span class="stat-label">P&L Total</span>
+                        <span class="stat-change neutral" id="mobilePnLChange">0%</span>
+                    </div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-icon">
+                        <i class="fas fa-exchange-alt"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-value" id="mobileOpenTrades">0</span>
+                        <span class="stat-label">Trades Actifs</span>
+                        <span class="stat-change neutral">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="actions-container">
+                <h3>Actions Rapides</h3>
+                <div class="actions-grid">
+                    <button class="action-btn primary" onclick="mobileDashboard.newTrade()">
+                        <i class="fas fa-plus"></i>
+                        <span>Nouveau Trade</span>
+                    </button>
+                    <button class="action-btn secondary" onclick="mobileDashboard.closeTrade()">
+                        <i class="fas fa-times-circle"></i>
+                        <span>Clôturer</span>
+                    </button>
+                    <button class="action-btn info" onclick="mobileDashboard.showRanking()">
+                        <i class="fas fa-trophy"></i>
+                        <span>Classement</span>
+                    </button>
+                    <button class="action-btn warning" onclick="mobileDashboard.showSettings()">
+                        <i class="fas fa-cog"></i>
+                        <span>Paramètres</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Recent Trades -->
+            <div class="recent-trades">
+                <h3>Trades Récents</h3>
+                <div id="mobileTradesList" class="trades-list">
+                    <!-- Trades will be loaded here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Trades Section -->
+        <section id="tradesSection" class="mobile-section">
+            <div class="section-header">
+                <h2>Mes Trades</h2>
+                <button class="add-btn" onclick="mobileDashboard.newTrade()">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+            <div class="trades-filter">
+                <select id="tradesFilter" onchange="mobileDashboard.filterTrades()">
+                    <option value="all">Tous</option>
+                    <option value="open">Ouverts</option>
+                    <option value="closed">Fermés</option>
+                </select>
+            </div>
+            <div id="allTradesList" class="trades-list">
+                <!-- All trades will be loaded here -->
+            </div>
+        </section>
+
+        <!-- Ranking Section -->
+        <section id="rankingSection" class="mobile-section">
+            <div class="section-header">
+                <h2>🏆 Classement VIP</h2>
+                <select id="rankingPeriod" onchange="mobileDashboard.loadRanking()">
+                    <option value="monthly">Ce mois</option>
+                    <option value="weekly">Cette semaine</option>
+                    <option value="daily">Aujourd'hui</option>
+                    <option value="all">Tout temps</option>
+                </select>
+            </div>
+            <div id="mobileRankingList" class="ranking-list">
+                <!-- Ranking will be loaded here -->
+            </div>
+        </section>
+
+        <!-- Settings Section -->
+        <section id="settingsSection" class="mobile-section">
+            <div class="section-header">
+                <h2>Paramètres</h2>
+            </div>
+            <div class="settings-list">
+                <div class="setting-item" onclick="mobileDashboard.editProfile()">
+                    <div class="setting-icon">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="setting-content">
+                        <span class="setting-title">Profil</span>
+                        <span class="setting-desc">Modifier pseudo et informations</span>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+                <div class="setting-item" onclick="mobileDashboard.editCapital()">
+                    <div class="setting-icon">
+                        <i class="fas fa-wallet"></i>
+                    </div>
+                    <div class="setting-content">
+                        <span class="setting-title">Capital</span>
+                        <span class="setting-desc">Définir capital initial</span>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+                <div class="setting-item" onclick="mobileDashboard.toggleNotifications()">
+                    <div class="setting-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="setting-content">
+                        <span class="setting-title">Notifications</span>
+                        <span class="setting-desc">Push et sons</span>
+                    </div>
+                    <div class="setting-toggle">
+                        <input type="checkbox" id="notificationsToggle" checked>
+                        <label for="notificationsToggle"></label>
+                    </div>
+                </div>
+                <div class="setting-item" onclick="mobileDashboard.exportData()">
+                    <div class="setting-icon">
+                        <i class="fas fa-download"></i>
+                    </div>
+                    <div class="setting-content">
+                        <span class="setting-title">Export</span>
+                        <span class="setting-desc">Télécharger données</span>
+                    </div>
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Mobile Modal -->
+    <div id="mobileModal" class="mobile-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Modal</h3>
+                <button class="modal-close" onclick="mobileDashboard.closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Modal content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button -->
+    <button id="fabBtn" class="fab" onclick="mobileDashboard.newTrade()">
+        <i class="fas fa-plus"></i>
+    </button>
+
+    <!-- Toast Notifications -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script src="assets/js/mobile-dashboard.js"></script>
+</body>
+</html>
