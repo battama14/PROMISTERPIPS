@@ -100,13 +100,15 @@ class ContentManager {
             const card = document.createElement('div');
             card.className = 'post-card';
             card.innerHTML = `
-                <div class="post-image">
-                    ${post.image ? `<img src="${post.image}" alt="${post.title}">` : '<div class="no-image"><i class="fas fa-image"></i></div>'}
+                <div class="post-header">
+                    <h3 style="text-align: center; margin: 0 0 8px 0; font-size: 0.95rem; line-height: 1.2;">${post.title}</h3>
+                </div>
+                <div class="post-image" style="text-align: center; margin: 8px 0;">
+                    ${post.image ? `<img src="${post.image}" alt="${post.title}" style="max-width: 100%; height: auto; border-radius: 6px; object-fit: cover;">` : '<div class="no-image"><i class="fas fa-image"></i></div>'}
                 </div>
                 <div class="post-content">
-                    <h3>${post.title}</h3>
-                    <p>${post.excerpt || post.content.substring(0, 100)}...</p>
-                    <div class="post-meta">
+                    <p style="margin: 8px 0; font-size: 0.8rem; color: #666; line-height: 1.3;">${post.excerpt || post.content.substring(0, 80)}...</p>
+                    <div class="post-meta" style="font-size: 0.75rem; margin: 8px 0;">
                         <span><i class="fas fa-calendar"></i> ${new Date(post.createdAt).toLocaleDateString()}</span>
                         <span><i class="fas fa-eye"></i> ${post.views || 0}</span>
                     </div>
@@ -439,16 +441,9 @@ class ContentManager {
 
     async uploadImageFile(file, folder) {
         return new Promise((resolve, reject) => {
-            // Vérifier la taille (max 1MB pour éviter les problèmes de base64)
-            if (file.size > 1024 * 1024) {
-                reject(new Error('Image trop volumineuse (max 1MB)'));
-                return;
-            }
-            
             const reader = new FileReader();
             reader.onload = function(e) {
-                const base64Data = e.target.result;
-                resolve(base64Data);
+                resolve(e.target.result);
             };
             reader.onerror = reject;
             reader.readAsDataURL(file);
@@ -460,9 +455,9 @@ class ContentManager {
         if (input.files && input.files[0]) {
             const file = input.files[0];
             
-            // Vérifier la taille
-            if (file.size > 1024 * 1024) {
-                preview.innerHTML = '<div style="color: #ff4444; padding: 1rem; background: rgba(255,68,68,0.1); border-radius: 8px;">Image trop volumineuse (max 1MB)</div>';
+            // Vérifier la taille (augmentée à 5MB pour qualité)
+            if (file.size > 5 * 1024 * 1024) {
+                preview.innerHTML = '<div style="color: #ff4444; padding: 1rem; background: rgba(255,68,68,0.1); border-radius: 8px;">Image trop volumineuse (max 5MB)</div>';
                 input.value = '';
                 return;
             }

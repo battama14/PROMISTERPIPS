@@ -153,7 +153,7 @@ class AdminDashboard {
         document.getElementById('siteConfigSection').style.display = 'block';
         this.updateNavigation('siteconfig');
         this.currentSection = 'siteconfig';
-        this.loadSiteConfig();
+        setTimeout(() => this.loadSiteConfig(), 100);
     }
 
     showSystem() {
@@ -303,8 +303,11 @@ class AdminDashboard {
         }
 
         try {
+            // Sauvegarder l'utilisateur admin actuel
+            const currentUser = window.firebaseAuth.currentUser;
+            
             // Créer le compte Firebase Auth
-            const { createUserWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js');
+            const { createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js');
             const userCredential = await createUserWithEmailAndPassword(window.firebaseAuth, email, password);
             const newUser = userCredential.user;
 
@@ -334,11 +337,23 @@ class AdminDashboard {
             const userRef = window.dbRef(window.firebaseDB, `users/${newUser.uid}`);
             await window.dbSet(userRef, userData);
 
-            this.showNotification('Utilisateur créé avec succès!', 'success');
+            // Reconnecter l'admin (récupérer email admin depuis sessionStorage)
+            const adminEmail = sessionStorage.getItem('userEmail');
+            if (adminEmail) {
+                // Déconnecter le nouvel utilisateur et reconnecter l'admin
+                await window.signOut(window.firebaseAuth);
+                // Note: Il faudrait le mot de passe admin, donc on évite la reconnexion automatique
+                // L'admin devra se reconnecter manuellement
+            }
+
+            this.showNotification('Utilisateur créé avec succès! Vous devez vous reconnecter.', 'success');
             this.closeModal();
-            await this.loadData();
-            this.updateStats();
-            this.loadUsers();
+            
+            // Rediriger vers la page de connexion après 2 secondes
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 2000);
+            
         } catch (error) {
             console.error('Erreur création utilisateur:', error);
             let errorMessage = 'Erreur lors de la création';
@@ -586,11 +601,15 @@ class AdminDashboard {
 
     async loadSiteConfig() {
         try {
+            console.log('📂 Chargement configuration site...');
+            
             const configRef = window.dbRef(window.firebaseDB, 'siteConfig');
             const snapshot = await window.dbGet(configRef);
             
             if (snapshot.exists()) {
                 const config = snapshot.val();
+                console.log('📝 Configuration chargée:', config);
+                
                 document.getElementById('heroProfit').value = config.heroProfit || '+2,847$';
                 document.getElementById('heroWinRate').value = config.heroWinRate || '87.3%';
                 document.getElementById('tradersCount').value = config.tradersCount || '500+';
@@ -600,14 +619,21 @@ class AdminDashboard {
                 document.getElementById('aboutTraders').value = config.aboutTraders || '500+';
                 document.getElementById('aboutSuccess').value = config.aboutSuccess || '87%';
                 document.getElementById('aboutSupport').value = config.aboutSupport || '24/7';
+                
+                console.log('✅ Champs remplis avec la configuration');
+            } else {
+                console.log('⚠️ Aucune configuration trouvée, utilisation des valeurs par défaut');
             }
         } catch (error) {
-            console.error('Erreur chargement config:', error);
+            console.error('❌ Erreur chargement config:', error);
+            this.showNotification('Erreur lors du chargement: ' + error.message, 'error');
         }
     }
 
     async saveSiteConfig() {
         try {
+            console.log('💾 Sauvegarde configuration site...');
+            
             const config = {
                 heroProfit: document.getElementById('heroProfit').value || '+2,847$',
                 heroWinRate: document.getElementById('heroWinRate').value || '87.3%',
@@ -621,13 +647,16 @@ class AdminDashboard {
                 lastUpdated: new Date().toISOString()
             };
 
+            console.log('📝 Configuration à sauvegarder:', config);
+
             const configRef = window.dbRef(window.firebaseDB, 'siteConfig');
             await window.dbSet(configRef, config);
             
+            console.log('✅ Configuration sauvegardée dans Firebase');
             this.showNotification('Configuration sauvegardée avec succès!', 'success');
         } catch (error) {
-            console.error('Erreur sauvegarde config:', error);
-            this.showNotification('Erreur lors de la sauvegarde', 'error');
+            console.error('❌ Erreur sauvegarde config:', error);
+            this.showNotification('Erreur lors de la sauvegarde: ' + error.message, 'error');
         }
     }
 
