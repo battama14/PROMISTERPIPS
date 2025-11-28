@@ -255,11 +255,15 @@ class AdminDashboard {
     addUser() {
         const modalContent = document.getElementById('modalContent');
         modalContent.innerHTML = `
-            <h3>Ajouter un Utilisateur</h3>
+            <h3>Créer un Utilisateur VIP</h3>
             <div class="trade-form">
                 <div class="form-group">
                     <label>Email:</label>
                     <input type="email" id="newUserEmail" placeholder="user@example.com">
+                </div>
+                <div class="form-group">
+                    <label>Mot de passe:</label>
+                    <input type="password" id="newUserPassword" placeholder="Mot de passe (min 6 caractères)">
                 </div>
                 <div class="form-group">
                     <label>Pseudo:</label>
@@ -284,16 +288,27 @@ class AdminDashboard {
 
     async saveNewUser() {
         const email = document.getElementById('newUserEmail').value;
+        const password = document.getElementById('newUserPassword').value;
         const pseudo = document.getElementById('newUserPseudo').value;
         const plan = document.getElementById('newUserPlan').value;
 
-        if (!email) {
-            this.showNotification('Email requis', 'error');
+        if (!email || !password) {
+            this.showNotification('Email et mot de passe requis', 'error');
+            return;
+        }
+
+        if (password.length < 6) {
+            this.showNotification('Mot de passe trop court (min 6 caractères)', 'error');
             return;
         }
 
         try {
-            const newUserId = 'user_' + Date.now();
+            // Créer le compte Firebase Auth
+            const { createUserWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js');
+            const userCredential = await createUserWithEmailAndPassword(window.firebaseAuth, email, password);
+            const newUser = userCredential.user;
+
+            // Créer les données utilisateur dans la base
             const userData = {
                 email,
                 pseudo,
@@ -316,7 +331,7 @@ class AdminDashboard {
                 lastUpdated: new Date().toISOString()
             };
 
-            const userRef = window.dbRef(window.firebaseDB, `users/${newUserId}`);
+            const userRef = window.dbRef(window.firebaseDB, `users/${newUser.uid}`);
             await window.dbSet(userRef, userData);
 
             this.showNotification('Utilisateur créé avec succès!', 'success');
@@ -326,7 +341,17 @@ class AdminDashboard {
             this.loadUsers();
         } catch (error) {
             console.error('Erreur création utilisateur:', error);
-            this.showNotification('Erreur lors de la création', 'error');
+            let errorMessage = 'Erreur lors de la création';
+            
+            if (error.code === 'auth/email-already-in-use') {
+                errorMessage = 'Cet email est déjà utilisé';
+            } else if (error.code === 'auth/invalid-email') {
+                errorMessage = 'Email invalide';
+            } else if (error.code === 'auth/weak-password') {
+                errorMessage = 'Mot de passe trop faible';
+            }
+            
+            this.showNotification(errorMessage, 'error');
         }
     }
 
@@ -441,19 +466,40 @@ class AdminDashboard {
     }
 
     async deleteUser(uid) {
-        if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) return;
+        if (!confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ? Cela supprimera aussi son compte Firebase.')) return;
 
         try {
+            // Supprimer les données utilisateur
             const userRef = window.dbRef(window.firebaseDB, `users/${uid}`);
-            await window.dbRemove(userRef);
+            await window.dbSet(userRef, null);
             
-            this.showNotification('Utilisateur supprimé avec succès!', 'success');
+            // Note: La suppression du compte Firebase Auth nécessite des privilèges admin côté serveur
+            // Pour l'instant, on supprime seulement les données
+            
+            this.showNotification('Données utilisateur supprimées avec succès!', 'success');
             await this.loadData();
             this.updateStats();
             this.loadUsers();
         } catch (error) {
             console.error('Erreur suppression utilisateur:', error);
             this.showNotification('Erreur lors de la suppression', 'error');
+        }
+    }
+
+    searchUser() {
+        const email = document.getElementById('searchUserEmail').value.toLowerCase();
+        if (!email) {
+            this.showNotification('Veuillez saisir un email', 'error');
+            return;
+        }
+        
+        const user = this.users.find(u => u.email && u.email.toLowerCase() === email);
+        if (user) {
+            this.closeModal();
+            this.editUser(user.uid);
+            this.showNotification('Utilisateur trouvé! Vous pouvez maintenant modifier son statut.', 'success');
+        } else {
+            this.showNotification('Utilisateur non trouvé. Il doit d\'abord créer son compte.', 'warning');
         }
     }
 

@@ -12,6 +12,7 @@ class MobileDashboard {
             sounds: true
         };
         this.notificationPermission = false;
+        this.chatVisible = false;
         this.init();
     }
 
@@ -41,6 +42,9 @@ class MobileDashboard {
         
         // Gérer les événements tactiles
         this.setupTouchEvents();
+        
+        // Initialiser le chat
+        this.setupChat();
         
         console.log('✅ Mobile dashboard initialisé');
     }
@@ -260,13 +264,13 @@ class MobileDashboard {
 
         const recentTrades = this.trades.slice(-5).reverse();
         
-        recentTrades.forEach(trade => {
-            const item = this.createTradeItem(trade);
+        recentTrades.forEach((trade, index) => {
+            const item = this.createTradeItem(trade, this.trades.indexOf(trade));
             container.appendChild(item);
         });
     }
 
-    createTradeItem(trade) {
+    createTradeItem(trade, index) {
         const div = document.createElement('div');
         div.className = 'trade-item';
         
@@ -277,6 +281,9 @@ class MobileDashboard {
             <div class="trade-header">
                 <span class="trade-pair">${trade.currency || 'EUR/USD'}</span>
                 <span class="trade-type ${(trade.type || 'BUY').toLowerCase()}">${trade.type || 'BUY'}</span>
+                <button class="mobile-share-btn" onclick="mobileDashboard.shareMobileTradeImage(${index})">
+                    <i class="fas fa-share-alt"></i>
+                </button>
             </div>
             <div class="trade-details">
                 <div class="trade-info">
@@ -287,9 +294,10 @@ class MobileDashboard {
             </div>
         `;
         
-        // Ajouter événement tactile
-        div.addEventListener('click', () => {
-            this.showTradeDetails(trade);
+        div.addEventListener('click', (e) => {
+            if (!e.target.closest('.mobile-share-btn')) {
+                this.showTradeDetails(trade);
+            }
         });
         
         return div;
@@ -560,6 +568,7 @@ class MobileDashboard {
         }
         
         this.showModal('Clôturer Trade', this.getCloseTradeForm(openTrades));
+        setTimeout(() => this.updateMobileTradePreview(), 100);
     }
 
     getCloseTradeForm(openTrades) {
@@ -567,7 +576,7 @@ class MobileDashboard {
             <div class="mobile-form">
                 <div class="form-group">
                     <label>Trade à clôturer</label>
-                    <select id="tradeToClose">
+                    <select id="tradeToClose" onchange="mobileDashboard.updateMobileTradePreview()">
                         ${openTrades.map((trade, index) => `
                             <option value="${this.trades.indexOf(trade)}">
                                 ${trade.currency} ${trade.type} - ${trade.lotSize} lots
@@ -575,29 +584,204 @@ class MobileDashboard {
                         `).join('')}
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Prix de sortie</label>
-                    <input type="number" id="exitPrice" step="0.00001" placeholder="1.12500">
+                <div id="mobileTradePreview" class="mobile-trade-preview">
+                    <!-- Aperçu du trade -->
                 </div>
                 <div class="form-group">
-                    <label>P&L ($)</label>
-                    <input type="number" id="tradePnL" step="0.01" placeholder="25.50">
+                    <label>Comment s'est terminé le trade ?</label>
+                    <div class="mobile-close-options">
+                        <button type="button" class="mobile-close-btn" data-type="tp" onclick="mobileDashboard.selectMobileCloseType('tp')">
+                            🎯 TP
+                        </button>
+                        <button type="button" class="mobile-close-btn" data-type="sl" onclick="mobileDashboard.selectMobileCloseType('sl')">
+                            🛡️ SL
+                        </button>
+                        <button type="button" class="mobile-close-btn" data-type="be" onclick="mobileDashboard.selectMobileCloseType('be')">
+                            ➡️ BE
+                        </button>
+                        <button type="button" class="mobile-close-btn" data-type="manual" onclick="mobileDashboard.selectMobileCloseType('manual')">
+                            ✋ Manuel
+                        </button>
+                        <button type="button" class="mobile-close-btn delete-btn" data-type="delete" onclick="mobileDashboard.selectMobileCloseType('delete')">
+                            🗑️ Supprimer
+                        </button>
+                    </div>
+                </div>
+                <div id="mobileManualPrice" class="form-group" style="display: none;">
+                    <label>Prix de sortie</label>
+                    <input type="number" id="manualPrice" step="0.00001" placeholder="1.12500">
+                </div>
+                <div id="mobileResultPreview" class="mobile-result-preview">
+                    <!-- Résultat -->
                 </div>
                 <div class="form-actions">
-                    <button class="btn-primary" onclick="mobileDashboard.saveCloseTrade()">Clôturer</button>
+                    <button class="btn-primary" id="mobileConfirmBtn" onclick="mobileDashboard.saveCloseTrade()" disabled>Confirmer</button>
                     <button class="btn-secondary" onclick="mobileDashboard.closeModal()">Annuler</button>
                 </div>
             </div>
         `;
     }
 
+    updateMobileTradePreview() {
+        const tradeIndex = parseInt(document.getElementById('tradeToClose')?.value);
+        const trade = this.trades[tradeIndex];
+        if (!trade) return;
+        
+        const previewDiv = document.getElementById('mobileTradePreview');
+        if (previewDiv) {
+            previewDiv.innerHTML = `
+                <div class="trade-info-mobile">
+                    <div><strong>${trade.currency}</strong> ${trade.type}</div>
+                    <div>Entrée: ${trade.entryPoint}</div>
+                    <div>SL: ${trade.stopLoss} | TP: ${trade.takeProfit}</div>
+                    <div>Lot: ${trade.lotSize}</div>
+                </div>
+            `;
+        }
+    }
+    
+    selectMobileCloseType(type) {
+        document.querySelectorAll('.mobile-close-btn').forEach(btn => btn.classList.remove('selected'));
+        document.querySelector(`[data-type="${type}"]`).classList.add('selected');
+        
+        const tradeIndex = parseInt(document.getElementById('tradeToClose')?.value);
+        const trade = this.trades[tradeIndex];
+        if (!trade) return;
+        
+        const manualDiv = document.getElementById('mobileManualPrice');
+        const confirmBtn = document.getElementById('mobileConfirmBtn');
+        
+        let exitPrice, pnl;
+        
+        if (type === 'tp') {
+            exitPrice = trade.takeProfit;
+            pnl = this.calculateMobilePnL(trade, exitPrice);
+            manualDiv.style.display = 'none';
+        } else if (type === 'sl') {
+            exitPrice = trade.stopLoss;
+            pnl = this.calculateMobilePnL(trade, exitPrice);
+            manualDiv.style.display = 'none';
+        } else if (type === 'be') {
+            exitPrice = trade.entryPoint;
+            pnl = 0;
+            manualDiv.style.display = 'none';
+        } else if (type === 'manual') {
+            manualDiv.style.display = 'block';
+            const manualInput = document.getElementById('manualPrice');
+            manualInput.oninput = () => {
+                const manualPrice = parseFloat(manualInput.value);
+                if (!isNaN(manualPrice)) {
+                    const manualPnL = this.calculateMobilePnL(trade, manualPrice);
+                    this.updateMobileResultPreview(manualPrice, manualPnL);
+                    confirmBtn.disabled = false;
+                }
+            };
+            confirmBtn.disabled = true;
+            return;
+        } else if (type === 'delete') {
+            manualDiv.style.display = 'none';
+            const resultDiv = document.getElementById('mobileResultPreview');
+            if (resultDiv) {
+                resultDiv.innerHTML = `
+                    <div class="mobile-result delete-warning">
+                        <div>⚠️ SUPPRESSION</div>
+                        <div class="pnl-result">Trade effacé définitivement</div>
+                    </div>
+                `;
+            }
+            confirmBtn.textContent = 'Supprimer';
+            confirmBtn.disabled = false;
+            confirmBtn.dataset.closeType = type;
+            return;
+        }
+        
+        this.updateMobileResultPreview(exitPrice, pnl);
+        confirmBtn.disabled = false;
+        confirmBtn.dataset.exitPrice = exitPrice;
+        confirmBtn.dataset.pnl = pnl;
+        confirmBtn.dataset.closeType = type;
+    }
+    
+    calculateMobilePnL(trade, exitPrice) {
+        const entryPrice = parseFloat(trade.entryPoint);
+        const capital = this.settings.capital;
+        const riskPercent = this.settings.riskPerTrade / 100;
+        
+        // Distance SL
+        let slDistance;
+        if (trade.currency.includes('JPY')) {
+            slDistance = Math.abs(entryPrice - parseFloat(trade.stopLoss)) * 100;
+        } else {
+            slDistance = Math.abs(entryPrice - parseFloat(trade.stopLoss)) * 10000;
+        }
+        
+        // Distance sortie
+        let exitDistance;
+        if (trade.currency.includes('JPY')) {
+            exitDistance = Math.abs(exitPrice - entryPrice) * 100;
+        } else {
+            exitDistance = Math.abs(exitPrice - entryPrice) * 10000;
+        }
+        
+        // Montant risqué = capital * risque%
+        const riskAmount = capital * riskPercent;
+        
+        // Valeur par pip
+        const valuePerPip = slDistance > 0 ? riskAmount / slDistance : 1;
+        
+        // Direction du trade
+        const direction = trade.type === 'BUY' ? (exitPrice > entryPrice ? 1 : -1) : (exitPrice < entryPrice ? 1 : -1);
+        
+        return exitDistance * valuePerPip * direction;
+    }
+    
+    updateMobileResultPreview(exitPrice, pnl) {
+        const resultDiv = document.getElementById('mobileResultPreview');
+        if (resultDiv) {
+            const pnlClass = pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : 'neutral';
+            const pnlIcon = pnl > 0 ? '📈' : pnl < 0 ? '📉' : '➡️';
+            
+            resultDiv.innerHTML = `
+                <div class="mobile-result ${pnlClass}">
+                    <div>${pnlIcon} Sortie: ${exitPrice}</div>
+                    <div class="pnl-result">P&L: $${pnl.toFixed(2)}</div>
+                </div>
+            `;
+        }
+    }
+
     async saveCloseTrade() {
         const tradeIndex = parseInt(document.getElementById('tradeToClose').value);
-        const exitPrice = parseFloat(document.getElementById('exitPrice').value);
-        const pnl = parseFloat(document.getElementById('tradePnL').value);
+        const confirmBtn = document.getElementById('mobileConfirmBtn');
+        
+        if (confirmBtn.dataset.closeType === 'delete') {
+            if (confirm('Supprimer ce trade définitivement ?')) {
+                this.trades.splice(tradeIndex, 1);
+                await this.saveData();
+                this.closeModal();
+                this.updateStats();
+                this.loadRecentTrades();
+                this.showToast('Trade supprimé!', 'success');
+                if ('vibrate' in navigator) {
+                    navigator.vibrate([100, 50, 100]);
+                }
+            }
+            return;
+        }
+        
+        let exitPrice, pnl;
+        
+        if (confirmBtn.dataset.closeType === 'manual') {
+            exitPrice = parseFloat(document.getElementById('manualPrice')?.value);
+            const trade = this.trades[tradeIndex];
+            pnl = this.calculateMobilePnL(trade, exitPrice);
+        } else {
+            exitPrice = parseFloat(confirmBtn.dataset.exitPrice);
+            pnl = parseFloat(confirmBtn.dataset.pnl);
+        }
 
         if (isNaN(tradeIndex) || isNaN(exitPrice) || isNaN(pnl)) {
-            this.showToast('Veuillez remplir tous les champs', 'error');
+            this.showToast('Erreur dans les données', 'error');
             return;
         }
 
@@ -605,6 +789,7 @@ class MobileDashboard {
         this.trades[tradeIndex].exitPoint = exitPrice;
         this.trades[tradeIndex].pnl = pnl;
         this.trades[tradeIndex].closedAt = Date.now();
+        this.trades[tradeIndex].closeType = confirmBtn.dataset.closeType;
 
         await this.saveData();
         
@@ -618,6 +803,89 @@ class MobileDashboard {
         if ('vibrate' in navigator) {
             navigator.vibrate([50, 30, 50]);
         }
+    }
+    
+    shareMobileTradeImage(tradeIndex) {
+        const trade = this.trades[tradeIndex];
+        if (!trade) return;
+        
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 500;
+        canvas.height = 350;
+        
+        const gradient = ctx.createLinearGradient(0, 0, 0, 350);
+        gradient.addColorStop(0, '#0a0e27');
+        gradient.addColorStop(1, '#151932');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 500, 350);
+        
+        const logoImg = new Image();
+        logoImg.onload = () => {
+            ctx.drawImage(logoImg, 200, 15, 30, 30);
+            ctx.fillStyle = '#00d4ff';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'left';
+            ctx.fillText('MISTERPIPS', 240, 40);
+            
+            ctx.fillStyle = '#8892b0';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('🚀 Trading VIP', 250, 60);
+            
+            const pnl = parseFloat(trade.pnl || 0);
+            const pnlColor = pnl >= 0 ? '#44ff44' : '#ff4444';
+            const pnlIcon = pnl >= 0 ? '📈' : '📉';
+            
+            ctx.textAlign = 'left';
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 18px Arial';
+            ctx.fillText(`${trade.currency} ${trade.type}`, 30, 100);
+            
+            ctx.font = '14px Arial';
+            ctx.fillStyle = '#8892b0';
+            ctx.fillText(`Entrée: ${trade.entryPoint}`, 30, 125);
+            ctx.fillText(`SL: ${trade.stopLoss}`, 30, 145);
+            ctx.fillText(`TP: ${trade.takeProfit}`, 30, 165);
+            ctx.fillText(`Lot: ${trade.lotSize}`, 30, 185);
+            
+            ctx.font = 'bold 28px Arial';
+            ctx.fillStyle = pnlColor;
+            ctx.textAlign = 'center';
+            ctx.fillText(`${pnlIcon} $${Math.abs(pnl).toFixed(2)}`, 350, 140);
+            
+            ctx.font = '16px Arial';
+            ctx.fillText(pnl >= 0 ? 'PROFIT' : 'PERTE', 350, 165);
+            
+            ctx.fillStyle = '#00d4ff';
+            ctx.font = 'bold 14px Arial';
+            ctx.fillText('💎 Rejoignez le groupe VIP', 250, 240);
+            
+            ctx.fillStyle = '#8892b0';
+            ctx.font = '11px Arial';
+            ctx.fillText('Signaux professionnels • Support 24/7', 250, 260);
+            ctx.fillText('📞 https://t.me/misterpips_support', 250, 280);
+            
+            canvas.toBlob((blob) => {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `misterpips_${trade.currency}_${Date.now()}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+                
+                this.showToast('Image créée! 📱', 'success');
+                
+                if ('vibrate' in navigator) {
+                    navigator.vibrate([100, 50, 100]);
+                }
+                
+                setTimeout(() => {
+                    window.open('https://t.me/misterpips_support', '_blank');
+                }, 1000);
+            }, 'image/png');
+        };
+        logoImg.src = 'assets/images/Misterpips.jpg';
     }
 
     showRanking() {
@@ -849,6 +1117,162 @@ class MobileDashboard {
         } catch (error) {
             console.log('Son non disponible:', error);
         }
+    }
+
+    // Chat Functions
+    setupChat() {
+        // Écouter les messages du chat
+        if (window.firebaseDB) {
+            const chatRef = window.dbRef(window.firebaseDB, 'chat/messages');
+            window.onValue(chatRef, (snapshot) => {
+                if (snapshot.exists()) {
+                    const messages = Object.values(snapshot.val())
+                        .sort((a, b) => a.timestamp - b.timestamp)
+                        .slice(-50);
+                    this.displayChatMessages(messages);
+                }
+            });
+        }
+        
+        // Événement Enter sur l'input
+        const chatInput = document.getElementById('chatInput');
+        if (chatInput) {
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.sendMessage();
+                }
+            });
+        }
+    }
+    
+    toggleChat() {
+        const chat = document.getElementById('mobileChat');
+        this.chatVisible = !this.chatVisible;
+        
+        if (this.chatVisible) {
+            chat.classList.add('active');
+            // Charger les messages si c'est la première ouverture
+            if (document.getElementById('chatMessages').children.length === 0) {
+                this.loadChatMessages();
+            }
+        } else {
+            chat.classList.remove('active');
+        }
+        
+        if ('vibrate' in navigator) {
+            navigator.vibrate(30);
+        }
+    }
+    
+    async sendMessage() {
+        const input = document.getElementById('chatInput');
+        const message = input.value.trim();
+        
+        if (!message) {
+            this.showToast('Veuillez saisir un message', 'warning');
+            return;
+        }
+        
+        if (message.length > 200) {
+            this.showToast('Message trop long (max 200 caractères)', 'error');
+            return;
+        }
+        
+        // Récupérer le pseudo
+        const pseudo = localStorage.getItem(`pseudo_${this.currentUser}`) || 
+                      sessionStorage.getItem('userEmail')?.split('@')[0] || 
+                      'Utilisateur';
+        
+        const messageData = {
+            id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            userId: this.currentUser,
+            nickname: pseudo,
+            message: message,
+            timestamp: Date.now(),
+            type: 'text'
+        };
+        
+        try {
+            // Envoyer à Firebase (chat global VIP)
+            if (window.firebaseDB) {
+                const chatRef = window.dbRef(window.firebaseDB, 'chat/messages');
+                await window.push(chatRef, messageData);
+                
+                input.value = '';
+                this.showToast('Message envoyé!', 'success');
+                
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(50);
+                }
+            } else {
+                throw new Error('Firebase non disponible');
+            }
+        } catch (error) {
+            console.error('Erreur envoi message:', error);
+            this.showToast('Erreur envoi message', 'error');
+        }
+    }
+    
+    async loadChatMessages() {
+        try {
+            if (window.firebaseDB) {
+                const chatRef = window.dbRef(window.firebaseDB, 'chat/messages');
+                const snapshot = await window.dbGet(chatRef);
+                
+                if (snapshot.exists()) {
+                    const messages = Object.values(snapshot.val())
+                        .sort((a, b) => a.timestamp - b.timestamp)
+                        .slice(-50);
+                    this.displayChatMessages(messages);
+                }
+            }
+        } catch (error) {
+            console.error('Erreur chargement messages:', error);
+        }
+    }
+    
+    displayChatMessages(messages) {
+        const container = document.getElementById('chatMessages');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        if (messages.length === 0) {
+            container.innerHTML = '<div class="no-messages">Aucun message pour le moment...</div>';
+            return;
+        }
+        
+        messages.forEach(msg => {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${msg.userId === this.currentUser ? 'own' : 'other'}`;
+            
+            const time = new Date(msg.timestamp).toLocaleTimeString('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    <div class="message-text">${this.escapeHtml(msg.message)}</div>
+                    <div class="message-info">
+                        <span class="message-author">${this.escapeHtml(msg.nickname)}</span>
+                        <span class="message-time">${time}</span>
+                    </div>
+                </div>
+            `;
+            
+            container.appendChild(messageDiv);
+        });
+        
+        // Scroll vers le bas
+        container.scrollTop = container.scrollHeight;
+    }
+    
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     async logout() {

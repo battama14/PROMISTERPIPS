@@ -91,7 +91,8 @@ class SimpleTradingDashboard {
             
             if (chatToggle && chatContainer) {
                 chatToggle.addEventListener('click', () => {
-                    chatContainer.style.display = chatContainer.style.display === 'none' ? 'block' : 'none';
+                    const isVisible = chatContainer.style.display !== 'none';
+                    chatContainer.style.display = isVisible ? 'none' : 'block';
                 });
             }
             
@@ -102,11 +103,20 @@ class SimpleTradingDashboard {
             }
             
             if (sendBtn && chatInput) {
-                sendBtn.addEventListener('click', () => this.sendChatMessage());
+                sendBtn.addEventListener('click', () => {
+                    console.log('Send button clicked');
+                    this.sendChatMessage();
+                });
                 chatInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') this.sendChatMessage();
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        console.log('Enter pressed');
+                        this.sendChatMessage();
+                    }
                 });
             }
+            
+
             
             // Ranking period change
             const rankingPeriod = document.getElementById('rankingPeriod');
@@ -522,6 +532,9 @@ class SimpleTradingDashboard {
                     <button class="action-btn-small" onclick="dashboard.editTrade(${this.trades.indexOf(trade)})">
                         <i class="fas fa-edit"></i>
                     </button>
+                    <button class="action-btn-small share" onclick="dashboard.shareTradeImage(${this.trades.indexOf(trade)})" title="Partager sur Telegram">
+                        <i class="fas fa-share-alt"></i>
+                    </button>
                 </div>
             `;
             tbody.appendChild(row);
@@ -755,6 +768,9 @@ class SimpleTradingDashboard {
                         <button class="action-btn-small delete" onclick="dashboard.deleteTrade(${originalIndex})">
                             <i class="fas fa-trash"></i>
                         </button>
+                        <button class="action-btn-small share" onclick="dashboard.shareTradeImage(${originalIndex})" title="Partager">
+                            <i class="fas fa-share-alt"></i>
+                        </button>
                     </div>
                 </div>
             `;
@@ -770,10 +786,10 @@ class SimpleTradingDashboard {
         const message = chatInput.value.trim();
         if (!message) return;
         
-        // Ajouter le message de l'utilisateur
-        const userMessage = document.createElement('div');
-        userMessage.className = 'message user';
-        userMessage.innerHTML = `
+        // Afficher immédiatement le message
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message user';
+        messageDiv.innerHTML = `
             <div class="message-content">
                 <span class="message-author">Vous</span>
                 <p>${message}</p>
@@ -784,51 +800,28 @@ class SimpleTradingDashboard {
             </div>
         `;
         
-        chatMessages.appendChild(userMessage);
-        chatInput.value = '';
-        
-        // Scroll vers le bas
+        chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
         
-        // Réponse automatique du bot
-        setTimeout(() => {
-            const botResponse = this.getBotResponse(message);
-            const botMessage = document.createElement('div');
-            botMessage.className = 'message bot';
-            botMessage.innerHTML = `
-                <div class="message-avatar">
-                    <i class="fas fa-robot"></i>
-                </div>
-                <div class="message-content">
-                    <span class="message-author">Misterpips Bot</span>
-                    <p>${botResponse}</p>
-                    <span class="message-time">${new Date().toLocaleTimeString()}</span>
-                </div>
-            `;
+        // Envoyer à Firebase
+        if (window.firebaseDB) {
+            const messageData = {
+                id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                userId: this.currentUser,
+                nickname: localStorage.getItem(`pseudo_${this.currentUser}`) || sessionStorage.getItem('userEmail')?.split('@')[0] || 'Utilisateur',
+                message: message,
+                timestamp: Date.now(),
+                type: 'text'
+            };
             
-            chatMessages.appendChild(botMessage);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }, 1000);
-    }
-
-    getBotResponse(message) {
-        const responses = {
-            'bonjour': 'Bonjour ! Comment puis-je vous aider avec votre trading aujourd\'hui ? 📈',
-            'aide': 'Je peux vous aider avec vos trades, statistiques et stratégies. Que souhaitez-vous savoir ?',
-            'stats': `Vos stats actuelles : ${this.trades.length} trades, taux de réussite ${this.calculateWinRate()}%`,
-            'merci': 'De rien ! Bon trading ! 🚀',
-            'default': 'Merci pour votre message ! Notre équipe vous répondra bientôt. En attendant, consultez vos statistiques de trading ! 📊'
-        };
-        
-        const lowerMessage = message.toLowerCase();
-        for (const [key, response] of Object.entries(responses)) {
-            if (lowerMessage.includes(key)) {
-                return response;
-            }
+            const chatRef = window.dbRef(window.firebaseDB, 'chat/messages');
+            window.push(chatRef, messageData);
         }
         
-        return responses.default;
+        chatInput.value = '';
     }
+
+
 
     calculateWinRate() {
         const closedTrades = this.trades.filter(t => t.status === 'closed');
@@ -1431,30 +1424,63 @@ function showCloseTradeModal() {
         <div class="trade-form">
             <div class="form-group">
                 <label>Sélectionner le trade à clôturer:</label>
-                <select id="tradeToClose">
+                <select id="tradeToClose" onchange="dashboard.updateTradePreview()">
                     ${openTrades.map((trade, index) => `
                         <option value="${dashboard.trades.indexOf(trade)}">
-                            ${trade.currency} ${trade.type} - ${trade.lotSize} lots
+                            ${trade.currency} ${trade.type} - ${trade.lotSize} lots (Entrée: ${trade.entryPoint})
                         </option>
                     `).join('')}
                 </select>
             </div>
-            <div class="form-group">
-                <label>Prix de sortie:</label>
-                <input type="number" id="exitPrice" step="0.00001" placeholder="1.12345">
+            <div id="tradePreview" class="trade-preview">
+                <!-- Aperçu du trade sélectionné -->
             </div>
             <div class="form-group">
-                <label>P&L ($):</label>
-                <input type="number" id="closePnL" step="0.01" placeholder="25.50">
+                <label>Comment le trade s'est-il terminé ?</label>
+                <div class="close-options">
+                    <button type="button" class="close-option" data-type="tp" onclick="dashboard.selectCloseType('tp')">
+                        <i class="fas fa-bullseye"></i>
+                        <span>Take Profit</span>
+                        <small>Objectif atteint</small>
+                    </button>
+                    <button type="button" class="close-option" data-type="sl" onclick="dashboard.selectCloseType('sl')">
+                        <i class="fas fa-shield-alt"></i>
+                        <span>Stop Loss</span>
+                        <small>Protection activée</small>
+                    </button>
+                    <button type="button" class="close-option" data-type="be" onclick="dashboard.selectCloseType('be')">
+                        <i class="fas fa-equals"></i>
+                        <span>Break Even</span>
+                        <small>Sortie à l'entrée</small>
+                    </button>
+                    <button type="button" class="close-option" data-type="manual" onclick="dashboard.selectCloseType('manual')">
+                        <i class="fas fa-hand-paper"></i>
+                        <span>Manuel</span>
+                        <small>Clôture manuelle</small>
+                    </button>
+                    <button type="button" class="close-option delete-option" data-type="delete" onclick="dashboard.selectCloseType('delete')">
+                        <i class="fas fa-trash"></i>
+                        <span>Supprimer</span>
+                        <small>Effacer le trade</small>
+                    </button>
+                </div>
+            </div>
+            <div id="manualPriceGroup" class="form-group" style="display: none;">
+                <label>Prix de sortie manuel:</label>
+                <input type="number" id="manualExitPrice" step="0.00001" placeholder="1.12345">
+            </div>
+            <div id="resultPreview" class="result-preview">
+                <!-- Résultat calculé -->
             </div>
             <div class="form-actions">
-                <button class="btn-primary" onclick="dashboard.closeTrade()">Clôturer Trade</button>
+                <button class="btn-primary" id="confirmCloseBtn" onclick="dashboard.closeTrade()" disabled>Confirmer Clôture</button>
                 <button class="btn-secondary" onclick="dashboard.closeModal()">Annuler</button>
             </div>
         </div>
     `;
     
     dashboard.showModal();
+    dashboard.updateTradePreview();
 }
 
 function showHistoryTradeModal() {
@@ -1615,13 +1641,183 @@ SimpleTradingDashboard.prototype.exportToExcel = function() {
     exportToExcel();
 };
 
+SimpleTradingDashboard.prototype.updateTradePreview = function() {
+    const tradeIndex = parseInt(document.getElementById('tradeToClose')?.value);
+    const trade = this.trades[tradeIndex];
+    if (!trade) return;
+    
+    const previewDiv = document.getElementById('tradePreview');
+    if (previewDiv) {
+        previewDiv.innerHTML = `
+            <div class="trade-details">
+                <div class="detail-row">
+                    <span>Paire:</span> <strong>${trade.currency}</strong>
+                </div>
+                <div class="detail-row">
+                    <span>Type:</span> <strong>${trade.type}</strong>
+                </div>
+                <div class="detail-row">
+                    <span>Entrée:</span> <strong>${trade.entryPoint}</strong>
+                </div>
+                <div class="detail-row">
+                    <span>Stop Loss:</span> <strong>${trade.stopLoss}</strong>
+                </div>
+                <div class="detail-row">
+                    <span>Take Profit:</span> <strong>${trade.takeProfit}</strong>
+                </div>
+                <div class="detail-row">
+                    <span>Lot Size:</span> <strong>${trade.lotSize}</strong>
+                </div>
+            </div>
+        `;
+    }
+};
+
+SimpleTradingDashboard.prototype.selectCloseType = function(type) {
+    // Réinitialiser les boutons
+    document.querySelectorAll('.close-option').forEach(btn => btn.classList.remove('selected'));
+    document.querySelector(`[data-type="${type}"]`).classList.add('selected');
+    
+    const tradeIndex = parseInt(document.getElementById('tradeToClose')?.value);
+    const trade = this.trades[tradeIndex];
+    if (!trade) return;
+    
+    const manualGroup = document.getElementById('manualPriceGroup');
+    const resultPreview = document.getElementById('resultPreview');
+    const confirmBtn = document.getElementById('confirmCloseBtn');
+    
+    let exitPrice, pnl;
+    
+    if (type === 'tp') {
+        exitPrice = trade.takeProfit;
+        pnl = this.calculatePnL(trade, exitPrice);
+        manualGroup.style.display = 'none';
+    } else if (type === 'sl') {
+        exitPrice = trade.stopLoss;
+        pnl = this.calculatePnL(trade, exitPrice);
+        manualGroup.style.display = 'none';
+    } else if (type === 'be') {
+        exitPrice = trade.entryPoint;
+        pnl = 0;
+        manualGroup.style.display = 'none';
+    } else if (type === 'manual') {
+        manualGroup.style.display = 'block';
+        const manualInput = document.getElementById('manualExitPrice');
+        manualInput.oninput = () => {
+            const manualPrice = parseFloat(manualInput.value);
+            if (!isNaN(manualPrice)) {
+                const manualPnL = this.calculatePnL(trade, manualPrice);
+                this.updateResultPreview(manualPrice, manualPnL);
+                confirmBtn.disabled = false;
+            }
+        };
+        confirmBtn.disabled = true;
+        return;
+    } else if (type === 'delete') {
+        manualGroup.style.display = 'none';
+        resultPreview.innerHTML = `
+            <div class="result-summary delete-warning">
+                <div class="result-icon">⚠️</div>
+                <div class="result-details">
+                    <div class="result-price">ATTENTION: Suppression définitive</div>
+                    <div class="result-pnl">Ce trade sera complètement effacé</div>
+                </div>
+            </div>
+        `;
+        confirmBtn.textContent = 'Supprimer le Trade';
+        confirmBtn.disabled = false;
+        confirmBtn.dataset.closeType = type;
+        return;
+    }
+    
+    this.updateResultPreview(exitPrice, pnl);
+    confirmBtn.disabled = false;
+    
+    // Stocker les valeurs pour la clôture
+    confirmBtn.dataset.exitPrice = exitPrice;
+    confirmBtn.dataset.pnl = pnl;
+    confirmBtn.dataset.closeType = type;
+};
+
+SimpleTradingDashboard.prototype.calculatePnL = function(trade, exitPrice) {
+    const entryPrice = parseFloat(trade.entryPoint);
+    const capital = this.settings.capital;
+    const riskPercent = this.settings.riskPerTrade / 100;
+    
+    // Distance SL en pips
+    let slDistance;
+    if (trade.currency.includes('JPY')) {
+        slDistance = Math.abs(entryPrice - parseFloat(trade.stopLoss)) * 100;
+    } else {
+        slDistance = Math.abs(entryPrice - parseFloat(trade.stopLoss)) * 10000;
+    }
+    
+    // Distance sortie en pips
+    let exitDistance;
+    if (trade.currency.includes('JPY')) {
+        exitDistance = Math.abs(exitPrice - entryPrice) * 100;
+    } else {
+        exitDistance = Math.abs(exitPrice - entryPrice) * 10000;
+    }
+    
+    // Montant risqué = capital * risque%
+    const riskAmount = capital * riskPercent;
+    
+    // Valeur par pip = montant risqué / distance SL
+    const valuePerPip = slDistance > 0 ? riskAmount / slDistance : 1;
+    
+    // Direction du trade
+    const direction = trade.type === 'BUY' ? (exitPrice > entryPrice ? 1 : -1) : (exitPrice < entryPrice ? 1 : -1);
+    
+    return exitDistance * valuePerPip * direction;
+};
+
+SimpleTradingDashboard.prototype.updateResultPreview = function(exitPrice, pnl) {
+    const resultDiv = document.getElementById('resultPreview');
+    if (resultDiv) {
+        const pnlClass = pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : 'neutral';
+        const pnlIcon = pnl > 0 ? '📈' : pnl < 0 ? '📉' : '➡️';
+        
+        resultDiv.innerHTML = `
+            <div class="result-summary ${pnlClass}">
+                <div class="result-icon">${pnlIcon}</div>
+                <div class="result-details">
+                    <div class="result-price">Prix de sortie: <strong>${exitPrice}</strong></div>
+                    <div class="result-pnl">P&L: <strong class="${pnlClass}">$${pnl.toFixed(2)}</strong></div>
+                </div>
+            </div>
+        `;
+    }
+};
+
 SimpleTradingDashboard.prototype.closeTrade = function() {
     const tradeIndex = parseInt(document.getElementById('tradeToClose')?.value);
-    const exitPrice = parseFloat(document.getElementById('exitPrice')?.value);
-    const pnl = parseFloat(document.getElementById('closePnL')?.value);
+    const confirmBtn = document.getElementById('confirmCloseBtn');
+    
+    if (confirmBtn.dataset.closeType === 'delete') {
+        if (confirm('Êtes-vous sûr de vouloir supprimer ce trade définitivement ?')) {
+            this.trades.splice(tradeIndex, 1);
+            this.saveData();
+            this.closeModal();
+            this.fullDashboardUpdate();
+            this.showNotification('Trade supprimé!', 'success');
+        }
+        return;
+    }
+    
+    let exitPrice, pnl;
+    
+    if (confirmBtn.dataset.closeType === 'manual') {
+        exitPrice = parseFloat(document.getElementById('manualExitPrice')?.value);
+        const trade = this.trades[tradeIndex];
+        pnl = this.calculatePnL(trade, exitPrice);
+    } else {
+        exitPrice = parseFloat(confirmBtn.dataset.exitPrice);
+        pnl = parseFloat(confirmBtn.dataset.pnl);
+    }
     
     if (isNaN(tradeIndex) || isNaN(exitPrice) || isNaN(pnl)) {
-        this.showNotification('Veuillez remplir tous les champs', 'error');
+        this.showNotification('Erreur dans les données du trade', 'error');
         return;
     }
     
@@ -1629,11 +1825,109 @@ SimpleTradingDashboard.prototype.closeTrade = function() {
     this.trades[tradeIndex].exitPoint = exitPrice;
     this.trades[tradeIndex].pnl = pnl;
     this.trades[tradeIndex].closedAt = Date.now();
+    this.trades[tradeIndex].closeType = confirmBtn.dataset.closeType;
     
     this.saveData();
     this.closeModal();
     this.fullDashboardUpdate();
-    this.showNotification('Trade clôturé avec succès!');
+    this.showNotification('Trade clôturé avec succès!', 'success');
+};
+
+SimpleTradingDashboard.prototype.shareTradeImage = function(tradeIndex) {
+    const trade = this.trades[tradeIndex];
+    if (!trade) return;
+    
+    // Créer un canvas pour l'image
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 600;
+    canvas.height = 400;
+    
+    // Fond dégradé
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, '#0a0e27');
+    gradient.addColorStop(1, '#151932');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 600, 400);
+    
+    // Header avec logo
+    const logoImg = new Image();
+    logoImg.onload = () => {
+        // Dessiner le logo
+        ctx.drawImage(logoImg, 250, 15, 40, 40);
+        
+        // Texte MISTERPIPS à côté
+        ctx.fillStyle = '#00d4ff';
+        ctx.font = 'bold 28px Arial';
+        ctx.textAlign = 'left';
+        ctx.fillText('MISTERPIPS', 300, 45);
+        
+        // Continuer avec le reste de l'image
+        ctx.fillStyle = '#8892b0';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('🚀 Résultat de Trading VIP', 300, 75);
+        
+        const pnl = parseFloat(trade.pnl || 0);
+        const pnlColor = pnl >= 0 ? '#44ff44' : '#ff4444';
+        const pnlIcon = pnl >= 0 ? '📈' : '📉';
+        const status = trade.status === 'closed' ? 'FERMÉ' : 'OUVERT';
+        
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 20px Arial';
+        ctx.fillText(`${trade.currency} ${trade.type}`, 50, 130);
+        
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#8892b0';
+        ctx.fillText(`Entrée: ${trade.entryPoint}`, 50, 160);
+        ctx.fillText(`Stop Loss: ${trade.stopLoss}`, 50, 185);
+        ctx.fillText(`Take Profit: ${trade.takeProfit}`, 50, 210);
+        ctx.fillText(`Lot Size: ${trade.lotSize}`, 50, 235);
+        ctx.fillText(`Date: ${new Date(trade.date).toLocaleDateString()}`, 50, 260);
+        
+        ctx.font = 'bold 32px Arial';
+        ctx.fillStyle = pnlColor;
+        ctx.textAlign = 'center';
+        ctx.fillText(`${pnlIcon} $${Math.abs(pnl).toFixed(2)}`, 450, 180);
+        
+        ctx.font = '18px Arial';
+        ctx.fillStyle = pnl >= 0 ? '#44ff44' : '#ff4444';
+        ctx.fillText(pnl >= 0 ? 'PROFIT' : 'PERTE', 450, 210);
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '14px Arial';
+        ctx.fillText(`Status: ${status}`, 450, 240);
+        
+        ctx.fillStyle = '#00d4ff';
+        ctx.font = 'bold 16px Arial';
+        ctx.fillText('💎 Rejoignez notre groupe VIP', 300, 320);
+        
+        ctx.fillStyle = '#8892b0';
+        ctx.font = '12px Arial';
+        ctx.fillText('Signaux de trading professionnels', 300, 340);
+        ctx.fillText('Support 24/7 • Communauté active', 300, 355);
+        ctx.fillText('📞 https://t.me/misterpips_support', 300, 375);
+        
+        canvas.toBlob((blob) => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `misterpips_trade_${trade.currency}_${new Date().toISOString().split('T')[0]}.png`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            this.showNotification('Image générée! Partagez sur Telegram 📱', 'success');
+            
+            setTimeout(() => {
+                const telegramUrl = 'https://t.me/misterpips_support';
+                window.open(telegramUrl, '_blank');
+            }, 1000);
+        }, 'image/png');
+    };
+    logoImg.src = 'assets/images/Misterpips.jpg';
+    
+
 };
 
 SimpleTradingDashboard.prototype.saveHistoryTrade = function() {
@@ -1674,3 +1968,52 @@ SimpleTradingDashboard.prototype.saveHistoryTrade = function() {
     this.fullDashboardUpdate();
     this.showNotification('Trade passé enregistré avec succès!');
 };
+
+SimpleTradingDashboard.prototype.displayChatMessages = function(messages) {
+    const chatMessages = document.querySelector('.chat-messages');
+    if (!chatMessages) return;
+    
+    // Garder le message de bienvenue, supprimer le reste
+    const welcomeMessage = chatMessages.querySelector('.welcome-message');
+    chatMessages.innerHTML = '';
+    if (welcomeMessage) {
+        chatMessages.appendChild(welcomeMessage);
+    }
+    
+    messages.forEach(msg => {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${msg.userId === this.currentUser ? 'user' : 'other'}`;
+        
+        const time = new Date(msg.timestamp).toLocaleTimeString();
+        
+        if (msg.userId === this.currentUser) {
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    <span class="message-author">Vous</span>
+                    <p>${msg.message}</p>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-avatar">
+                    <i class="fas fa-user"></i>
+                </div>
+            `;
+        } else {
+            messageDiv.innerHTML = `
+                <div class="message-avatar">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <div class="message-content">
+                    <span class="message-author">${msg.nickname}</span>
+                    <p>${msg.message}</p>
+                    <span class="message-time">${time}</span>
+                </div>
+            `;
+        }
+        
+        chatMessages.appendChild(messageDiv);
+    });
+    
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+};
+
+// Ajouter les styles pour le bouton share
