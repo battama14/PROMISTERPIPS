@@ -303,15 +303,34 @@ class AdminDashboard {
         }
 
         try {
-            // Sauvegarder l'utilisateur admin actuel
-            const currentUser = window.firebaseAuth.currentUser;
+            // Sauvegarder les infos admin actuelles
+            const adminUser = window.firebaseAuth.currentUser;
+            const adminEmail = adminUser.email;
             
-            // Créer le compte Firebase Auth
-            const { createUserWithEmailAndPassword, signInWithEmailAndPassword } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js');
-            const userCredential = await createUserWithEmailAndPassword(window.firebaseAuth, email, password);
+            // Créer une nouvelle instance Firebase pour éviter la déconnexion
+            const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js');
+            const { getAuth, createUserWithEmailAndPassword, signOut } = await import('https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js');
+            
+            const secondaryApp = initializeApp({
+                apiKey: "AIzaSyDSDK0NfVSs_VQb3TnrixiJbOpTsmoUMvU",
+                authDomain: "misterpips-b71fb.firebaseapp.com",
+                databaseURL: "https://misterpips-b71fb-default-rtdb.europe-west1.firebasedatabase.app",
+                projectId: "misterpips-b71fb",
+                storageBucket: "misterpips-b71fb.firebasestorage.app",
+                messagingSenderId: "574231126409",
+                appId: "1:574231126409:web:b7ed93ac4ea62e247dc158"
+            }, 'secondary');
+            
+            const secondaryAuth = getAuth(secondaryApp);
+            
+            // Créer le compte avec l'instance secondaire
+            const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
             const newUser = userCredential.user;
-
-            // Créer les données utilisateur dans la base
+            
+            // Déconnecter l'instance secondaire
+            await signOut(secondaryAuth);
+            
+            // Créer les données utilisateur
             const userData = {
                 email,
                 pseudo,
