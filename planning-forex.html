@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planning Forex - Misterpips VIP</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/planning.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase Scripts -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js';
+        import { getDatabase, ref, set, get, onValue } from 'https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyDSDK0NfVSs_VQb3TnrixiJbOpTsmoUMvU",
+            authDomain: "misterpips-b71fb.firebaseapp.com",
+            databaseURL: "https://misterpips-b71fb-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "misterpips-b71fb",
+            storageBucket: "misterpips-b71fb.firebasestorage.app",
+            messagingSenderId: "574231126409",
+            appId: "1:574231126409:web:b7ed93ac4ea62e247dc158"
+        };
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        
+        window.firebaseDB = db;
+        window.firebaseAuth = auth;
+        window.dbRef = ref;
+        window.dbGet = get;
+        window.dbSet = set;
+        window.onValue = onValue;
+        
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = 'index.html';
+            } else {
+                sessionStorage.setItem('firebaseUID', user.uid);
+                sessionStorage.setItem('userEmail', user.email);
+            }
+        });
+        
+        console.log('✅ Firebase Planning initialisé');
+    </script>
+</head>
+<body class="planning-body">
+    <!-- Header -->
+    <header class="planning-header">
+        <div class="header-container">
+            <div class="header-left">
+                <button id="backBtn" class="back-btn" onclick="window.location.href='dashboard.html'">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="brand-section">
+                    <div class="brand-logo">
+                        <img src="assets/images/Misterpips.jpg" alt="Misterpips Logo">
+                    </div>
+                    <div class="brand-info">
+                        <h1>Planning Forex</h1>
+                        <span class="brand-subtitle">Centre de Trading Professionnel</span>
+                    </div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="market-status" id="marketStatus">
+                    <div class="status-indicator"></div>
+                    <span>Marchés Fermés</span>
+                </div>
+                <div class="current-time" id="currentTime"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="planning-main">
+        <!-- Quick Stats -->
+        <section class="quick-stats">
+            <div class="stats-container">
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Session Actuelle</span>
+                        <span class="stat-value" id="currentSession">Londres</span>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-day"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Événements Aujourd'hui</span>
+                        <span class="stat-value" id="todayEvents">5</span>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Impact Élevé</span>
+                        <span class="stat-value" id="highImpactEvents">2</span>
+                    </div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon">
+                        <i class="fas fa-bell"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Alertes Actives</span>
+                        <span class="stat-value" id="activeAlerts">3</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Grid -->
+        <div class="planning-grid">
+            <!-- Left Column -->
+            <div class="left-column">
+                <!-- Sessions de Trading -->
+                <section class="trading-sessions">
+                    <div class="section-header">
+                        <h2><i class="fas fa-globe"></i> Sessions de Trading</h2>
+                        <button class="refresh-btn" onclick="planningForex.updateSessions()">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div class="sessions-container">
+                        <div class="session-item" data-session="sydney">
+                            <div class="session-info">
+                                <div class="session-flag">🇦🇺</div>
+                                <div class="session-details">
+                                    <h4>Sydney</h4>
+                                    <span class="session-time">22:00 - 07:00</span>
+                                </div>
+                            </div>
+                            <div class="session-status closed">Fermée</div>
+                        </div>
+                        <div class="session-item" data-session="tokyo">
+                            <div class="session-info">
+                                <div class="session-flag">🇯🇵</div>
+                                <div class="session-details">
+                                    <h4>Tokyo</h4>
+                                    <span class="session-time">00:00 - 09:00</span>
+                                </div>
+                            </div>
+                            <div class="session-status closed">Fermée</div>
+                        </div>
+                        <div class="session-item" data-session="london">
+                            <div class="session-info">
+                                <div class="session-flag">🇬🇧</div>
+                                <div class="session-details">
+                                    <h4>Londres</h4>
+                                    <span class="session-time">08:00 - 17:00</span>
+                                </div>
+                            </div>
+                            <div class="session-status active">Active</div>
+                        </div>
+                        <div class="session-item" data-session="newyork">
+                            <div class="session-info">
+                                <div class="session-flag">🇺🇸</div>
+                                <div class="session-details">
+                                    <h4>New York</h4>
+                                    <span class="session-time">13:00 - 22:00</span>
+                                </div>
+                            </div>
+                            <div class="session-status upcoming">Bientôt</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Outils de Trading -->
+                <section class="trading-tools">
+                    <div class="section-header">
+                        <h2><i class="fas fa-tools"></i> Outils de Trading</h2>
+                    </div>
+                    <div class="tools-grid">
+                        <div class="tool-card" onclick="planningForex.openCalculator()">
+                            <div class="tool-icon">
+                                <i class="fas fa-calculator"></i>
+                            </div>
+                            <div class="tool-info">
+                                <h4>Calculateur de Position</h4>
+                                <p>Calculez votre taille de position optimale</p>
+                            </div>
+                        </div>
+                        <div class="tool-card" onclick="planningForex.openPipCalculator()">
+                            <div class="tool-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="tool-info">
+                                <h4>Calculateur de Pips</h4>
+                                <p>Convertissez les pips en valeur monétaire</p>
+                            </div>
+                        </div>
+                        <div class="tool-card" onclick="planningForex.openRiskCalculator()">
+                            <div class="tool-icon">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <div class="tool-info">
+                                <h4>Gestion des Risques</h4>
+                                <p>Analysez votre exposition au risque</p>
+                            </div>
+                        </div>
+                        <div class="tool-card" onclick="planningForex.openSwapCalculator()">
+                            <div class="tool-icon">
+                                <i class="fas fa-exchange-alt"></i>
+                            </div>
+                            <div class="tool-info">
+                                <h4>Calculateur de Swap</h4>
+                                <p>Calculez les frais de portage</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column -->
+            <div class="right-column">
+                <!-- Calendrier Économique -->
+                <section class="economic-calendar">
+                    <div class="section-header">
+                        <h2><i class="fas fa-calendar-alt"></i> Calendrier Économique</h2>
+                        <div class="calendar-controls">
+                            <select id="impactFilter">
+                                <option value="all">Tous les impacts</option>
+                                <option value="high">Impact élevé</option>
+                                <option value="medium">Impact moyen</option>
+                                <option value="low">Impact faible</option>
+                            </select>
+                            <button class="today-btn" onclick="planningForex.goToToday()">Aujourd'hui</button>
+                        </div>
+                    </div>
+                    <div class="calendar-container">
+                        <div class="calendar-nav">
+                            <button class="nav-btn" onclick="planningForex.previousDay()">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <span class="current-date" id="currentDate"></span>
+                            <button class="nav-btn" onclick="planningForex.nextDay()">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                        <div class="events-list" id="eventsList">
+                            <!-- Events will be loaded here -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Alertes -->
+                <section class="alerts-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-bell"></i> Alertes & Notifications</h2>
+                        <button class="add-alert-btn" onclick="planningForex.showAddAlertModal()">
+                            <i class="fas fa-plus"></i> Nouvelle Alerte
+                        </button>
+                    </div>
+                    <div class="alerts-container" id="alertsContainer">
+                        <!-- Alerts will be loaded here -->
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal pour les outils -->
+    <div id="toolModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2 id="modalTitle">Outil de Trading</h2>
+                <button class="modal-close" onclick="planningForex.closeModal()">&times;</button>
+            </div>
+            <div class="modal-content">
+                <div id="modalContent">
+                    <!-- Tool content will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour les alertes -->
+    <div id="alertModal" class="modal-overlay">
+        <div class="modal-container">
+            <div class="modal-header">
+                <h2>Nouvelle Alerte</h2>
+                <button class="modal-close" onclick="planningForex.closeAlertModal()">&times;</button>
+            </div>
+            <div class="modal-content">
+                <div class="alert-form">
+                    <div class="form-group">
+                        <label>Type d'alerte</label>
+                        <select id="alertType">
+                            <option value="price">Prix</option>
+                            <option value="event">Événement économique</option>
+                            <option value="session">Session de trading</option>
+                            <option value="time">Rappel temporel</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Paire de devises</label>
+                        <select id="alertPair">
+                            <option value="EURUSD">EUR/USD</option>
+                            <option value="GBPUSD">GBP/USD</option>
+                            <option value="USDJPY">USD/JPY</option>
+                            <option value="AUDUSD">AUD/USD</option>
+                            <option value="USDCAD">USD/CAD</option>
+                            <option value="XAUUSD">XAU/USD</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Condition</label>
+                        <select id="alertCondition">
+                            <option value="above">Au-dessus de</option>
+                            <option value="below">En-dessous de</option>
+                            <option value="equals">Égal à</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Prix cible</label>
+                        <input type="number" id="alertPrice" step="0.00001" placeholder="1.12345">
+                    </div>
+                    <div class="form-group">
+                        <label>Message personnalisé</label>
+                        <textarea id="alertMessage" placeholder="Message d'alerte personnalisé..."></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn-primary" onclick="planningForex.saveAlert()">Créer l'Alerte</button>
+                        <button class="btn-secondary" onclick="planningForex.closeAlertModal()">Annuler</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/planning-forex.js"></script>
+</body>
+</html>

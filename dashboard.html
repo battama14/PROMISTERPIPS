@@ -35,7 +35,7 @@
         window.dbGet = get;
         window.dbSet = set;
         window.onValue = onValue;
-        window.push = push;
+        window.dbPush = push;
         window.signOut = signOut;
         
         onAuthStateChanged(auth, (user) => {
@@ -118,7 +118,7 @@
                 </div>
                 <div class="nav-section">
                     <h3>Outils</h3>
-                    <a href="planning-forex.html" class="nav-item">
+                    <a href="#" class="nav-item" onclick="window.open('planning-forex.html', '_blank'); return false;">
                         <i class="fas fa-calendar-alt"></i>
                         <span>Planning Forex</span>
                     </a>
