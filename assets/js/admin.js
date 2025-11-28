@@ -337,22 +337,11 @@ class AdminDashboard {
             const userRef = window.dbRef(window.firebaseDB, `users/${newUser.uid}`);
             await window.dbSet(userRef, userData);
 
-            // Reconnecter l'admin (récupérer email admin depuis sessionStorage)
-            const adminEmail = sessionStorage.getItem('userEmail');
-            if (adminEmail) {
-                // Déconnecter le nouvel utilisateur et reconnecter l'admin
-                await window.signOut(window.firebaseAuth);
-                // Note: Il faudrait le mot de passe admin, donc on évite la reconnexion automatique
-                // L'admin devra se reconnecter manuellement
-            }
-
-            this.showNotification('Utilisateur créé avec succès! Vous devez vous reconnecter.', 'success');
+            this.showNotification('Utilisateur créé avec succès!', 'success');
             this.closeModal();
-            
-            // Rediriger vers la page de connexion après 2 secondes
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 2000);
+            await this.loadData();
+            this.updateStats();
+            this.loadUsers();
             
         } catch (error) {
             console.error('Erreur création utilisateur:', error);
