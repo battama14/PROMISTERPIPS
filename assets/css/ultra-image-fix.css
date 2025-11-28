@@ -1,0 +1,79 @@
+/* IMAGE FIX - TAILLE ORIGINALE */
+
+/* Images avec taille originale */
+* img,
+*[src*="data:image"],
+.blog-card img,
+.testimonial-item img,
+.gallery-item img,
+.post-card img,
+.gallery-card img,
+.testimonial-card img {
+    image-rendering: auto !important;
+    max-width: 100% !important;
+    height: auto !important;
+    display: block !important;
+}
+
+/* Dimensions forcées pour les images de posts */
+.blog-card img,
+.blog-image img {
+    width: 100% !important;
+    height: 200px !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    border-radius: 8px !important;
+}
+
+/* Dimensions forcées pour les témoignages */
+.testimonial-item img,
+.testimonial-card img {
+    width: 200px !important;
+    height: 200px !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    border-radius: 8px !important;
+    margin: 0 auto !important;
+}
+
+/* Dimensions forcées pour la galerie */
+.gallery-item img,
+.gallery-card img {
+    width: 200px !important;
+    height: 200px !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    border-radius: 8px !important;
+    margin: 0 auto !important;
+}
+
+/* Container fixes */
+.blog-image,
+.testimonial-avatar,
+.gallery-image {
+    overflow: hidden !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Amélioration de la netteté */
+img[src*="data:image/png"] {
+    image-rendering: -webkit-optimize-contrast !important;
+    -webkit-filter: contrast(1.1) brightness(1.05) !important;
+    filter: contrast(1.1) brightness(1.05) !important;
+}
+
+/* Force l'affichage correct */
+.blog-card,
+.testimonial-item,
+.gallery-item {
+    overflow: hidden !important;
+}
+
+/* Supprime tout flou */
+* {
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+}

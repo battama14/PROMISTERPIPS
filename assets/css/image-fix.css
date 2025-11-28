@@ -1,0 +1,70 @@
+/* Correction forcée des images - Priorité maximale */
+.blog-section .blog-grid .blog-card .blog-image,
+.blog-card .blog-image,
+.blog-image {
+    height: 80px !important;
+    max-height: 80px !important;
+    min-height: 80px !important;
+    overflow: hidden !important;
+    display: block !important;
+    border-radius: 8px !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.blog-section .blog-grid .blog-card .blog-image img,
+.blog-card .blog-image img,
+.blog-image img {
+    width: 100% !important;
+    height: 80px !important;
+    max-height: 80px !important;
+    min-height: 80px !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    border-radius: 6px !important;
+}
+
+/* Styles pour le gestionnaire de contenu */
+.post-card .post-image,
+.post-image {
+    height: 80px !important;
+    max-height: 80px !important;
+    min-height: 80px !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 8px !important;
+    margin: 8px 0 !important;
+}
+
+.post-card .post-image img,
+.post-image img {
+    max-width: 100% !important;
+    max-height: 80px !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+    border-radius: 6px !important;
+}
+
+/* Styles pour témoignages */
+.testimonial-author img {
+    width: 60px !important;
+    height: 60px !important;
+    object-fit: cover !important;
+    border-radius: 50% !important;
+}
+
+/* Styles pour galerie */
+.gallery-item img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+}
+
+.gallery-item {
+    aspect-ratio: 1 !important;
+    overflow: hidden !important;
+    border-radius: 15px !important;
+}
