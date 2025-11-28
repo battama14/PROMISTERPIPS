@@ -59,10 +59,37 @@
                 sessionStorage.setItem('firebaseUID', user.uid);
                 sessionStorage.setItem('userEmail', user.email);
                 
+                // Récupérer le pseudo depuis localStorage ou Firebase
                 const savedPseudo = localStorage.getItem(`pseudo_${user.uid}`);
-                const displayElement = document.getElementById('userDisplay');
-                if (displayElement) {
-                    displayElement.textContent = savedPseudo || user.email.split('@')[0];
+                if (savedPseudo) {
+                    const displayElement = document.getElementById('userDisplay');
+                    if (displayElement) {
+                        displayElement.textContent = savedPseudo;
+                    }
+                } else {
+                    // Essayer de récupérer depuis Firebase
+                    const userRef = ref(db, `users/${user.uid}/pseudo`);
+                    get(userRef).then((snapshot) => {
+                        if (snapshot.exists()) {
+                            const pseudo = snapshot.val();
+                            localStorage.setItem(`pseudo_${user.uid}`, pseudo);
+                            const displayElement = document.getElementById('userDisplay');
+                            if (displayElement) {
+                                displayElement.textContent = pseudo;
+                            }
+                        } else {
+                            const displayElement = document.getElementById('userDisplay');
+                            if (displayElement) {
+                                displayElement.textContent = user.email.split('@')[0];
+                            }
+                        }
+                    }).catch((error) => {
+                        console.error('Erreur récupération pseudo:', error);
+                        const displayElement = document.getElementById('userDisplay');
+                        if (displayElement) {
+                            displayElement.textContent = user.email.split('@')[0];
+                        }
+                    });
                 }
             }
         });
@@ -315,6 +342,28 @@
     <button id="fabBtn" class="fab" onclick="mobileDashboard.newTrade()">
         <i class="fas fa-plus"></i>
     </button>
+
+    <!-- Chat Button -->
+    <button id="chatBtn" class="chat-btn" onclick="mobileDashboard.toggleChat()">
+        <i class="fas fa-comments"></i>
+    </button>
+
+    <!-- Mobile Chat -->
+    <div id="mobileChat" class="mobile-chat">
+        <div class="chat-header">
+            <h3>💬 Chat VIP</h3>
+            <button class="chat-close" onclick="mobileDashboard.toggleChat()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="chatMessages" class="chat-messages"></div>
+        <div class="chat-input">
+            <input type="text" id="chatInput" placeholder="Tapez votre message..." maxlength="200">
+            <button id="sendBtn" onclick="mobileDashboard.sendMessage()">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
 
     <!-- Toast Notifications -->
     <div id="toastContainer" class="toast-container"></div>
