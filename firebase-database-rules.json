@@ -8,16 +8,18 @@
     },
     "users": {
       ".read": "auth != null",
+      ".write": "auth.uid === 'tr8b3TuRAeTKAqT9kx00YmQa6gA3'",
       "$uid": {
         ".read": "auth != null",
-        ".write": "$uid === auth.uid"
+        ".write": "$uid === auth.uid || auth.uid === 'tr8b3TuRAeTKAqT9kx00YmQa6gA3'"
       }
     },
     "profiles": {
       ".read": "auth != null",
+      ".write": "auth.uid === 'tr8b3TuRAeTKAqT9kx00YmQa6gA3'",
       "$uid": {
         ".read": "auth != null",
-        ".write": "$uid === auth.uid"
+        ".write": "$uid === auth.uid || auth.uid === 'tr8b3TuRAeTKAqT9kx00YmQa6gA3'"
       }
     },
     "chat": {
