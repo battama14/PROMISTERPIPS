@@ -13,6 +13,7 @@ class MobileDashboard {
         };
         this.notificationPermission = false;
         this.chatVisible = false;
+        this.unreadMessages = 0;
         this.init();
     }
 
@@ -341,8 +342,7 @@ class MobileDashboard {
             const winRate = closedTrades.length > 0 ? (winningTrades / closedTrades.length) * 100 : 0;
             
             if (closedTrades.length > 0) {
-                const savedPseudo = localStorage.getItem(`pseudo_${userId}`);
-                const displayName = savedPseudo || user.pseudo || user.email?.split('@')[0] || 'Utilisateur';
+                const displayName = user.pseudo || localStorage.getItem(`pseudo_${userId}`) || user.email?.split('@')[0] || 'Utilisateur';
                 
                 rankings.push({
                     userId,
@@ -915,7 +915,7 @@ class MobileDashboard {
         `);
     }
 
-    savePseudo() {
+    async savePseudo() {
         const newPseudo = document.getElementById('newPseudo').value.trim();
         
         if (!newPseudo) {
@@ -930,8 +930,55 @@ class MobileDashboard {
             displayElement.textContent = newPseudo;
         }
         
+        // Sauvegarder dans Firebase
+        await this.savePseudoToFirebase(newPseudo);
+        
         this.closeModal();
         this.showToast('Pseudo mis à jour!', 'success');
+        
+        // Recharger le classement
+        setTimeout(() => {
+            this.loadRanking();
+        }, 500);
+    }
+    
+    async savePseudoToFirebase(pseudo) {
+        if (!window.firebaseDB) return;
+        
+        try {
+            // Forcer la mise à jour du pseudo dans Firebase
+            const pseudoRef = window.dbRef(window.firebaseDB, `users/${this.currentUser}/pseudo`);
+            await window.dbSet(pseudoRef, pseudo);
+            
+            const userRef = window.dbRef(window.firebaseDB, `users/${this.currentUser}`);
+            const snapshot = await window.dbGet(userRef);
+            
+            let userData = {};
+            if (snapshot.exists()) {
+                userData = snapshot.val();
+            }
+            
+            userData.pseudo = pseudo;
+            userData.email = sessionStorage.getItem('userEmail') || 'user@example.com';
+            userData.isVIP = true;
+            userData.plan = 'VIP';
+            userData.lastUpdated = new Date().toISOString();
+            
+            if (!userData.accounts) {
+                userData.accounts = {
+                    compte1: {
+                        trades: this.trades,
+                        capital: this.settings.capital,
+                        settings: this.settings
+                    }
+                };
+            }
+            
+            await window.dbSet(userRef, userData);
+            console.log('✅ Pseudo forcé dans Firebase:', pseudo);
+        } catch (error) {
+            console.error('Erreur sauvegarde pseudo Firebase:', error);
+        }
     }
 
     editCapital() {
@@ -1124,12 +1171,30 @@ class MobileDashboard {
         // Écouter les messages du chat
         if (window.firebaseDB) {
             const chatRef = window.dbRef(window.firebaseDB, 'chat/messages');
+            let isFirstLoad = true;
             window.onValue(chatRef, (snapshot) => {
                 if (snapshot.exists()) {
                     const messages = Object.values(snapshot.val())
                         .sort((a, b) => a.timestamp - b.timestamp)
                         .slice(-50);
+                    
+                    if (!isFirstLoad) {
+                        const newMessages = messages.filter(msg => 
+                            msg.userId !== this.currentUser && 
+                            msg.timestamp > (this.lastMessageTime || 0)
+                        );
+                        
+                        if (newMessages.length > 0 && !this.chatVisible) {
+                            this.unreadMessages += newMessages.length;
+                            this.updateChatBadge();
+                            this.playNotificationSound();
+                            this.showPushNotification(newMessages[0]);
+                        }
+                    }
+                    
+                    this.lastMessageTime = messages.length > 0 ? messages[messages.length - 1].timestamp : 0;
                     this.displayChatMessages(messages);
+                    isFirstLoad = false;
                 }
             });
         }
@@ -1152,6 +1217,8 @@ class MobileDashboard {
         
         if (this.chatVisible) {
             chat.classList.add('active');
+            this.unreadMessages = 0;
+            this.updateChatBadge();
             // Charger les messages si c'est la première ouverture
             if (document.getElementById('chatMessages').children.length === 0) {
                 this.loadChatMessages();
@@ -1162,6 +1229,50 @@ class MobileDashboard {
         
         if ('vibrate' in navigator) {
             navigator.vibrate(30);
+        }
+    }
+    
+    updateChatBadge() {
+        const chatBtn = document.getElementById('chatBtn');
+        if (!chatBtn) return;
+        
+        let badge = chatBtn.querySelector('.chat-badge');
+        if (this.unreadMessages > 0) {
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'chat-badge';
+                badge.style.cssText = `
+                    position: absolute;
+                    top: -5px;
+                    right: -5px;
+                    background: #ff4444;
+                    color: white;
+                    border-radius: 50%;
+                    width: 20px;
+                    height: 20px;
+                    font-size: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    animation: pulse 1s infinite;
+                `;
+                chatBtn.style.position = 'relative';
+                chatBtn.appendChild(badge);
+            }
+            badge.textContent = this.unreadMessages > 9 ? '9+' : this.unreadMessages;
+        } else if (badge) {
+            badge.remove();
+        }
+    }
+    
+    showPushNotification(message) {
+        if (this.notificationPermission && this.settings.notifications) {
+            new Notification('Nouveau message - Misterpips', {
+                body: `${message.nickname}: ${message.message}`,
+                icon: 'assets/images/Misterpips.jpg',
+                tag: 'chat-message'
+            });
         }
     }
     
@@ -1197,7 +1308,7 @@ class MobileDashboard {
             // Envoyer à Firebase (chat global VIP)
             if (window.firebaseDB) {
                 const chatRef = window.dbRef(window.firebaseDB, 'chat/messages');
-                await window.push(chatRef, messageData);
+                await window.dbPush(chatRef, messageData);
                 
                 input.value = '';
                 this.showToast('Message envoyé!', 'success');

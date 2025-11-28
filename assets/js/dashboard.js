@@ -30,6 +30,8 @@ class SimpleTradingDashboard {
         this.currentStep = 0;
         this.currentTrade = {};
         this.charts = {};
+        this.chatVisible = false;
+        this.unreadMessages = 0;
         this.init();
     }
 
@@ -45,6 +47,9 @@ class SimpleTradingDashboard {
         setTimeout(() => {
             this.loadRanking();
         }, 2000);
+        
+        // Écouter les messages du chat
+        this.setupChatListener();
         
         document.body.style.opacity = '1';
         document.body.style.visibility = 'visible';
@@ -93,12 +98,17 @@ class SimpleTradingDashboard {
                 chatToggle.addEventListener('click', () => {
                     const isVisible = chatContainer.style.display !== 'none';
                     chatContainer.style.display = isVisible ? 'none' : 'block';
+                    if (!isVisible) {
+                        this.unreadMessages = 0;
+                        this.updateChatBadge();
+                    }
                 });
             }
             
             if (chatClose && chatContainer) {
                 chatClose.addEventListener('click', () => {
                     chatContainer.style.display = 'none';
+                    this.chatVisible = false;
                 });
             }
             
@@ -815,7 +825,7 @@ class SimpleTradingDashboard {
             };
             
             const chatRef = window.dbRef(window.firebaseDB, 'chat/messages');
-            window.push(chatRef, messageData);
+            window.dbPush(chatRef, messageData);
         }
         
         chatInput.value = '';
@@ -1045,7 +1055,7 @@ class SimpleTradingDashboard {
         this.showModal();
     }
 
-    savePseudo() {
+    async savePseudo() {
         const newPseudo = document.getElementById('newPseudo')?.value.trim();
         
         if (!newPseudo) {
@@ -1061,23 +1071,38 @@ class SimpleTradingDashboard {
         // Sauvegarder localement
         localStorage.setItem(`pseudo_${this.currentUser}`, newPseudo);
         
-        // Mettre à jour l'affichage
+        // Mettre à jour l'affichage immédiatement
         const displayElement = document.getElementById('userDisplay');
         if (displayElement) {
             displayElement.textContent = newPseudo;
         }
         
+        // Mettre à jour aussi dans mobile si ouvert
+        const mobileDisplay = document.getElementById('userDisplay');
+        if (mobileDisplay) {
+            mobileDisplay.textContent = newPseudo;
+        }
+        
         // Sauvegarder dans Firebase pour synchronisation
-        this.savePseudoToFirebase(newPseudo);
+        await this.savePseudoToFirebase(newPseudo);
         
         this.closeModal();
         this.showNotification('Pseudo mis à jour avec succès!');
+        
+        // Recharger le classement pour afficher le nouveau pseudo
+        setTimeout(() => {
+            this.loadRanking();
+        }, 500);
     }
 
     async savePseudoToFirebase(pseudo) {
         if (!window.firebaseDB) return;
         
         try {
+            // Forcer la mise à jour du pseudo dans Firebase
+            const pseudoRef = window.dbRef(window.firebaseDB, `users/${this.currentUser}/pseudo`);
+            await window.dbSet(pseudoRef, pseudo);
+            
             const userRef = window.dbRef(window.firebaseDB, `users/${this.currentUser}`);
             const snapshot = await window.dbGet(userRef);
             
@@ -1104,7 +1129,7 @@ class SimpleTradingDashboard {
             }
             
             await window.dbSet(userRef, userData);
-            console.log('✅ Pseudo sauvegardé dans Firebase');
+            console.log('✅ Pseudo forcé dans Firebase:', pseudo);
             
             // Forcer le rechargement du classement après sauvegarde
             setTimeout(() => {
@@ -1264,9 +1289,8 @@ function initializeDashboard() {
                 const winningTrades = closedTrades.filter(trade => parseFloat(trade.pnl || 0) > 0).length;
                 const winRate = closedTrades.length > 0 ? (winningTrades / closedTrades.length) * 100 : 0;
                 
-                // Récupérer le pseudo depuis localStorage ou Firebase
-                const savedPseudo = localStorage.getItem(`pseudo_${userId}`);
-                const displayName = savedPseudo || user.pseudo || user.email?.split('@')[0] || 'Utilisateur';
+                // Priorité au pseudo Firebase, puis localStorage
+                const displayName = user.pseudo || localStorage.getItem(`pseudo_${userId}`) || user.email?.split('@')[0] || 'Utilisateur';
                 
                 // Inclure les utilisateurs avec au moins 1 trade fermé dans la période
                 if (closedTrades.length > 0) {
@@ -1967,6 +1991,100 @@ SimpleTradingDashboard.prototype.saveHistoryTrade = function() {
     this.closeModal();
     this.fullDashboardUpdate();
     this.showNotification('Trade passé enregistré avec succès!');
+};
+
+SimpleTradingDashboard.prototype.setupChatListener = function() {
+    if (!window.firebaseDB) return;
+    
+    try {
+        const chatRef = window.dbRef(window.firebaseDB, 'chat/messages');
+        let isFirstLoad = true;
+        window.onValue(chatRef, (snapshot) => {
+            if (snapshot.exists()) {
+                const messages = Object.values(snapshot.val())
+                    .sort((a, b) => a.timestamp - b.timestamp)
+                    .slice(-50);
+                
+                if (!isFirstLoad) {
+                    const newMessages = messages.filter(msg => 
+                        msg.userId !== this.currentUser && 
+                        msg.timestamp > (this.lastMessageTime || 0)
+                    );
+                    
+                    if (newMessages.length > 0) {
+                        const chatContainer = document.querySelector('.chat-container');
+                        const isVisible = chatContainer && chatContainer.style.display !== 'none';
+                        
+                        if (!isVisible) {
+                            this.unreadMessages += newMessages.length;
+                            this.updateChatBadge();
+                            this.playNotificationSound();
+                        }
+                    }
+                }
+                
+                this.lastMessageTime = messages.length > 0 ? messages[messages.length - 1].timestamp : 0;
+                this.displayChatMessages(messages);
+                isFirstLoad = false;
+            }
+        });
+    } catch (error) {
+        console.error('Erreur listener chat:', error);
+    }
+};
+
+SimpleTradingDashboard.prototype.updateChatBadge = function() {
+    const chatToggle = document.querySelector('.chat-toggle');
+    if (!chatToggle) return;
+    
+    let badge = chatToggle.querySelector('.chat-badge');
+    if (this.unreadMessages > 0) {
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'chat-badge';
+            badge.style.cssText = `
+                position: absolute;
+                top: -5px;
+                right: -5px;
+                background: #ff4444;
+                color: white;
+                border-radius: 50%;
+                width: 20px;
+                height: 20px;
+                font-size: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                animation: pulse 1s infinite;
+            `;
+            chatToggle.style.position = 'relative';
+            chatToggle.appendChild(badge);
+        }
+        badge.textContent = this.unreadMessages > 9 ? '9+' : this.unreadMessages;
+    } else if (badge) {
+        badge.remove();
+    }
+};
+
+SimpleTradingDashboard.prototype.playNotificationSound = function() {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+    } catch (error) {
+        console.log('Son non disponible:', error);
+    }
 };
 
 SimpleTradingDashboard.prototype.displayChatMessages = function(messages) {
